@@ -1,10 +1,35 @@
 import { Probot } from "probot";
+import { LabelService } from "./services/labelService";
+import { OctokitLabelResponse } from "./services/labelService";
+
+const labelService: LabelService = new LabelService();
 
 export = (app: Probot) => {
+
+  app.on(['issues', 'pull_request', 'label'], async(context) => {
+    const octokitResponse = await context.octokit.issues.listLabelsForRepo(context.repo());
+    const repoOwnerData = await context.repo();
+    const labelCreator: (name: string, desc: string, color: string) => void = 
+      async (name: string, desc: string, color: string) => await context
+        .octokit
+        .rest
+        .issues
+        .createLabel(
+          {
+            ...repoOwnerData,
+            name: name,
+            description: desc,
+            color: color
+          }
+    );
+    labelService.updateLabels(octokitResponse.data as OctokitLabelResponse[], labelCreator);
+  })
+
   app.on("issues.opened", async (context) => {
     const issueComment = context.issue({
       body: "Thanks for opening this issue!",
     });
+    
     await context.octokit.issues.createComment(issueComment);
   });
   // For more information on building apps:
