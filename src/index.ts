@@ -8,8 +8,8 @@ export = (app: Probot) => {
 
   app.on(['issues', 'pull_request', 'label'], async(context) => {
     const octokitResponse = await context.octokit.issues.listLabelsForRepo(context.repo());
-    const repoOwnerData = await context.repo();
-    const labelCreator: (name: string, desc: string, color: string) => void = 
+    const repoOwnerData = context.repo();
+    const labelCreator: (name: string, desc: string, color: string) => Promise<any> = 
       async (name: string, desc: string, color: string) => await context
         .octokit
         .rest
@@ -22,7 +22,27 @@ export = (app: Probot) => {
             color: color
           }
     );
-    labelService.updateLabels(octokitResponse.data as OctokitLabelResponse[], labelCreator);
+    const labelUpdater: (oldName: string, newName: string, desc: string, color: string) => Promise<any> =
+      async (oldName: string, newName: string, desc: string, color: string) => await context
+        .octokit
+        .rest
+        .issues
+        .updateLabel(
+          {
+            ...repoOwnerData,
+            name: oldName,
+            new_name: newName,
+            description: desc,
+            color: color
+          }
+    );
+    labelService.generateMissingLabels(
+      labelService.updateLabels(
+        octokitResponse.data as OctokitLabelResponse[],
+        labelUpdater
+      ),
+      labelCreator
+    )
   })
 
   app.on("issues.opened", async (context) => {
