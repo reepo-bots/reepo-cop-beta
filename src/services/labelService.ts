@@ -60,8 +60,11 @@ class LabelCollection {
     public get labels(): Label[] {
         return this._labels;
     }
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 35f36c1df03baf8e03c31bec82e5fc812a7f6f9e
 }
 
 const LABELS_COLLECTIONS: LabelCollection[] = [
@@ -86,8 +89,11 @@ const LABELS_COLLECTIONS: LabelCollection[] = [
     )
 ]
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 35f36c1df03baf8e03c31bec82e5fc812a7f6f9e
 export interface OctokitLabelResponse {
     name: string;
     description: string;
@@ -96,6 +102,7 @@ export interface OctokitLabelResponse {
 
 export class LabelService {
 
+<<<<<<< HEAD
     private collatePresetLabelIdentifiers(): Map<string, Label> {
         const presetIdentifierMap: Map<string, Label> = new Map();
         LABELS_COLLECTIONS.forEach((labelCollection: LabelCollection) => {
@@ -106,6 +113,8 @@ export class LabelService {
         return presetIdentifierMap;
     }
 
+=======
+>>>>>>> 35f36c1df03baf8e03c31bec82e5fc812a7f6f9e
     private collatePresetSubstrings(): Map<string[], Label> {
         const presetSubstrMap: Map<string[], Label> = new Map();
         LABELS_COLLECTIONS.forEach((labelCollection: LabelCollection) => {
@@ -152,7 +161,10 @@ export class LabelService {
                         octokitLabelsFetchResponse.splice(+labelResponseIndex, 1);
                         remainingLabels = remainingLabels.filter((labelFromAll: Label) => labelFromAll.labelName !== label.labelName);
                         break;
+<<<<<<< HEAD
 
+=======
+>>>>>>> 35f36c1df03baf8e03c31bec82e5fc812a7f6f9e
                     }
                 }
                 if (isMatched) {
@@ -184,4 +196,8 @@ export class LabelService {
                 .catch(() => console.log(`Error in creating ${label.labelName}?`))
         );
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 35f36c1df03baf8e03c31bec82e5fc812a7f6f9e
