@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 
-class Label {
+export class Label {
     private _labelName: string;
     private _labelDesc: string;
     private _labelColor: string;
@@ -62,7 +62,7 @@ class LabelCollection {
     }
 }
 
-const LABELS_COLLECTIONS: LabelCollection[] = [
+export const LABELS_COLLECTIONS: LabelCollection[] = [
     new LabelCollection(
         'Issue Labels',
         [
