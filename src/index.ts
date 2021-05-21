@@ -47,6 +47,7 @@ export = (app: Probot) => {
 
   app.on(["pull_request.opened", "pull_request.reopened"], async (context) => {
     const repoOwnerData = context.repo();
+    
   })
 
   app.on("issues.opened", async (context) => {
