@@ -1,17 +1,19 @@
 {
-  "name": "sheriff",
+  "name": "repo-cop",
   "version": "1.0.0",
   "private": true,
   "description": "A Probot App that helps you police your repository",
   "author": "ptvrajsk <ptvrajsk@gmail.com>",
   "license": "ISC",
-  "homepage": "https://github.com/ptvrajsk/sheriff",
+  "homepage": "https://github.com/ptvrajsk/repo-cop",
   "keywords": [
     "probot",
     "github",
     "probot-app"
   ],
   "scripts": {
+    "build:dev": "tsc -p ./tsconfig-dev.json",
+    "dev": "npm run build:dev && probot run ./lib/index.js",
     "build": "tsc -p ./tsconfig.json",
     "start": "npm run build && probot run ./lib/index.js",
     "test": "jest"

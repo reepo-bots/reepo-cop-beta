@@ -1,16 +1,23 @@
 import GHLabel from '../model/model_ghLabel';
-import { LabelAction } from '../model/model_label';
 import LabelService from './labelService';
 import { LabelCollectionType } from '../model/model_labelCollection';
 import { LABEL_ARCHIVE } from '../constants/const_labels';
 import { PRAction } from '../model/model_pr';
+import { PRType } from '../model/model_label_type';
 
 export default class PRService {
-  public static replaceExistingPRLabels(
-    labelReplacer: (removalLabelName: string[], replacementLabelNames: string[]) => void,
+
+  /**
+   * Replaces existing PR Labels with new labels based on the PR Action.
+   * @param labelReplacer - A function that removes a set of labels and adds another to a PR.
+   * @param existingLabels - Existing set of Labels on said PR.
+   * @param prAction - Type of action taking place on said PR.
+   */
+  public replaceExistingPRLabels(
+    labelReplacer: (removalLabelName: string[], replacementLabelNames: string[]) => Promise<boolean>,
     existingLabels: GHLabel[],
     prAction: PRAction
-  ) {
+  ): Promise<boolean> {
     const labelNamesToRemove: string[] = LabelService.extractLabelNames(
       LabelCollectionType.PRCollection,
       existingLabels
@@ -19,13 +26,13 @@ export default class PRService {
     switch (prAction) {
       case PRAction.READY_FOR_REVIEW:
       case PRAction.OPENED:
-        labelNamesToAdd.push(LABEL_ARCHIVE.getLabel(LabelCollectionType.PRCollection, LabelAction.ToReview)?.name!);
+        labelNamesToAdd.push(LABEL_ARCHIVE.getLabel(LabelCollectionType.PRCollection, PRType.ToReview)?.name!);
         break;
       case PRAction.CONVERTED_TO_DRAFT:
-        labelNamesToAdd.push(LABEL_ARCHIVE.getLabel(LabelCollectionType.PRCollection, LabelAction.OnGoing)?.name!);
+        labelNamesToAdd.push(LABEL_ARCHIVE.getLabel(LabelCollectionType.PRCollection, PRType.OnGoing)?.name!);
         break;
     }
 
-    labelReplacer(labelNamesToRemove, labelNamesToAdd);
+    return labelReplacer(labelNamesToRemove, labelNamesToAdd);
   }
 }
