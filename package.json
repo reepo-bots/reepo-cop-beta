@@ -1,11 +1,11 @@
 {
-  "name": "repo-cop",
+  "name": "reepo-cop",
   "version": "1.0.0",
   "private": true,
   "description": "A Probot App that helps you police your repository",
   "author": "ptvrajsk <ptvrajsk@gmail.com>",
   "license": "ISC",
-  "homepage": "https://github.com/ptvrajsk/repo-cop",
+  "homepage": "https://github.com/ptvrajsk/reepo-cop",
   "keywords": [
     "probot",
     "github",

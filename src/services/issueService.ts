@@ -118,10 +118,6 @@ export default class IssueService {
         labelNamesToRemove.push(existingLabelName);
       }
     }
-
-    console.log(labelNamesToAdd)
-    console.log(labelNamesToRemove)
-
     
     return await labelReplacer(labelNamesToRemove, labelNamesToAdd);
   }
