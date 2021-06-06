@@ -1,0 +1,32 @@
+# This work flow file aims synchronize beta-tested features to
+# the main reepo-cop repository.
+
+name: Deploy updates from reepo-cop-beta to reepo-cop.
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  fetch_from_upstream:
+    if: ${{ github.repository == 'reepo-bots/reepo-cop-beta' }} 
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [12.x]
+    steps: 
+      - name: Checkout Upstream 
+        uses: actions/checkout@v2
+        with:
+          repository: reepo-bots/reepo-cop
+          ref: master
+          token: ${{ secrets.DEPLOYMENT_TOKEN }}
+          fetch-depth: 0
+      - name: Merge Upstream 
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git remote add upstream https://github.com/reepo-bots/reepo-cop-beta.git 
+          git fetch upstream
+          git merge upstream/master --allow-unrelated-histories
+          git push origin master -f
