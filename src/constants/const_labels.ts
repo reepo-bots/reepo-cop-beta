@@ -13,7 +13,14 @@ export const LABEL_ARCHIVE: LabelArchive = new LabelArchive([
       IssueType.Bug
     ),
     new Label(
-      `⚙️ ${LabelCollectionType.IssueCollection}.${IssueType.Feature}`,
+      `⚙️ ${LabelCollectionType.IssueCollection}.${IssueType.Process}`,
+      'This issue describes an element of the project\'s process.',
+      'F0FF01',
+      'process',
+      IssueType.Process
+    ),
+    new Label(
+      `💡 ${LabelCollectionType.IssueCollection}.${IssueType.Feature}`,
       'This issue describes a new feature.',
       '120BB0',
       'feature',

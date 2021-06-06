@@ -17,6 +17,7 @@ export enum IssueType {
   Feature = 'Feature',
   Documentation = 'Doc',
   Enhancement = 'Enhancement',
+  Process = 'Process'
 }
 
 export enum PriorityType {
