@@ -44,23 +44,24 @@ export default class PRService {
     const extractedMessageArray: RegExpExecArray | null = prCommitMessageRegex.exec(ghPr.body);
     const extractedMessage: string = extractedMessageArray ? extractedMessageArray[1].trim() : '';
     const commitMsgCorrectionMsg: string | null = this.getCommitMessageCorrectionMessage(extractedMessage);
-
-    // If no corrections needed.
-    if (!commitMsgCorrectionMsg) {
-      return true;
-    } else {
-      return await prCommenter(commitMsgCorrectionMsg);
-    }
+    return await prCommenter(commitMsgCorrectionMsg);
   }
 
+  /**
+   * Validates commit messages and returns a validation result
+   * string.
+   * @param commitMsg - Proposed Commit message on PR.
+   * @returns string containing validation results.
+   */
   private getCommitMessageCorrectionMessage(commitMsg: string): string {
-    const VALIDATION_TITLE = '## Commit Message Corrections\n';
+    const VALIDATION_TITLE = '## Commit Message Validation\n';
     const splitMsg: string[] = commitMsg.split('\n');
 
     // Ensures every line adheres to a 72 Char Limit.
     const validateCharCheck: (splitMsg: string[]) => string = (splitMsg: string[]) => {
       const MAX_LINE_LEN: number = 72;
-      const CORRECTION_TITLE: string = `### ❌ The following lines do not adhere to a ${MAX_LINE_LEN} char limit.`;
+      const CORRECTION_TITLE_SUCCESS: string = `### ✔️ All lines adhere to ${MAX_LINE_LEN} char limit.\n`
+      const CORRECTION_TITLE_FAIL: string = `### ❌ The following lines do not adhere to a ${MAX_LINE_LEN} char limit.`;
       const corrections: string[] = [];
       splitMsg.forEach((msgLine: string) => {
         if (msgLine.length > MAX_LINE_LEN) {
@@ -70,23 +71,28 @@ export default class PRService {
 
       // Combines all correction messages if any exist.
       return corrections.length === 0
-        ? ''
-        : `${CORRECTION_TITLE}${corrections.reduce(
+        ? CORRECTION_TITLE_SUCCESS
+        : `${CORRECTION_TITLE_FAIL}${corrections.reduce(
             (previousCorrection: string, currentCorrection: string) => `${previousCorrection}${currentCorrection}`
           )}\n`;
     };
 
     // Ensures there is a space between a title and body (if applicable).
     const validateSpaceBetweenTitleAndBody: (splitMsg: string[]) => string = (splitMsg: string[]) => {
-      const CORRECTION_TITLE: string = '### ❌ Commit message is missing a blank line between Title and Body.';
-      return splitMsg.length > 1 && splitMsg[1].trim() !== '' ? `${CORRECTION_TITLE}\n` : '';
+      const CORRECTION_TITLE_SUCCESS: string = `### ✔️ Commit message contains blank line between Title and Body.\n`
+      const CORRECTION_TITLE_FAIL: string = '### ❌ Commit message is missing a blank line between Title and Body.\n';
+
+      if (splitMsg.length > 1) {
+        if (splitMsg[1].trim() !== '') {
+          return CORRECTION_TITLE_FAIL;
+        } else {
+          return CORRECTION_TITLE_SUCCESS;
+        }
+      } else {
+        return '';
+      }
     };
 
-    const charAdherenceMsg: string = validateCharCheck(splitMsg);
-    const spaceAdherenceMsg: string = validateSpaceBetweenTitleAndBody(splitMsg);
-
-    return charAdherenceMsg && spaceAdherenceMsg
-      ? `${VALIDATION_TITLE}${validateCharCheck(splitMsg)}${validateSpaceBetweenTitleAndBody(splitMsg)}`
-      : '';
+    return `${VALIDATION_TITLE}${validateCharCheck(splitMsg)}${validateSpaceBetweenTitleAndBody(splitMsg)}`;
   }
 }
