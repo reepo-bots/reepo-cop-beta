@@ -4,9 +4,9 @@ import { LabelCollectionType } from '../model/model_labelCollection';
 import { LABEL_ARCHIVE } from '../constants/const_labels';
 import { PRAction } from '../model/model_pr';
 import { PRType } from '../model/model_label_type';
+import GHPr from '../model/model_ghPR';
 
 export default class PRService {
-
   /**
    * Replaces existing PR Labels with new labels based on the PR Action.
    * @param labelReplacer - A function that removes a set of labels and adds another to a PR.
@@ -34,5 +34,59 @@ export default class PRService {
     }
 
     return labelReplacer(labelNamesToRemove, labelNamesToAdd);
+  }
+
+  public async validatePRCommitMessageProposal(
+    ghPr: GHPr,
+    prCommenter: (comment: string) => Promise<boolean>
+  ): Promise<boolean> {
+    const prCommitMessageRegex: RegExp = /Commit Message:[\r\n]+```[\r\n](.*)[\r\n]```/gis;
+    const extractedMessageArray: RegExpExecArray | null = prCommitMessageRegex.exec(ghPr.body);
+    const extractedMessage: string = extractedMessageArray ? extractedMessageArray[1].trim() : '';
+    const commitMsgCorrectionMsg: string | null = this.getCommitMessageCorrectionMessage(extractedMessage);
+
+    // If no corrections needed.
+    if (!commitMsgCorrectionMsg) {
+      return true;
+    } else {
+      return await prCommenter(commitMsgCorrectionMsg);
+    }
+  }
+
+  private getCommitMessageCorrectionMessage(commitMsg: string): string {
+    const VALIDATION_TITLE = '## Commit Message Corrections\n';
+    const splitMsg: string[] = commitMsg.split('\n');
+
+    // Ensures every line adheres to a 72 Char Limit.
+    const validateCharCheck: (splitMsg: string[]) => string = (splitMsg: string[]) => {
+      const MAX_LINE_LEN: number = 72;
+      const CORRECTION_TITLE: string = `### ❌ The following lines do not adhere to a ${MAX_LINE_LEN} char limit.`;
+      const corrections: string[] = [];
+      splitMsg.forEach((msgLine: string) => {
+        if (msgLine.length > MAX_LINE_LEN) {
+          corrections.push(`\n- ${msgLine} || Len = ${msgLine.length}.`);
+        }
+      });
+
+      // Combines all correction messages if any exist.
+      return corrections.length === 0
+        ? ''
+        : `${CORRECTION_TITLE}${corrections.reduce(
+            (previousCorrection: string, currentCorrection: string) => `${previousCorrection}${currentCorrection}`
+          )}\n`;
+    };
+
+    // Ensures there is a space between a title and body (if applicable).
+    const validateSpaceBetweenTitleAndBody: (splitMsg: string[]) => string = (splitMsg: string[]) => {
+      const CORRECTION_TITLE: string = '### ❌ Commit message is missing a blank line between Title and Body.';
+      return splitMsg.length > 1 && splitMsg[1].trim() !== '' ? `${CORRECTION_TITLE}\n` : '';
+    };
+
+    const charAdherenceMsg: string = validateCharCheck(splitMsg);
+    const spaceAdherenceMsg: string = validateSpaceBetweenTitleAndBody(splitMsg);
+
+    return charAdherenceMsg && spaceAdherenceMsg
+      ? `${VALIDATION_TITLE}${validateCharCheck(splitMsg)}${validateSpaceBetweenTitleAndBody(splitMsg)}`
+      : '';
   }
 }

@@ -2,6 +2,7 @@ import { Context, WebhookPayloadWithRepository } from 'probot';
 import GHIssue from '../model/model_ghIssue';
 import GHLabel from '../model/model_ghLabel';
 import GHUser from '../model/model_ghUser';
+import GHPr from '../model/model_ghPR';
 
 const CODE_REST_REQUEST_SUCCESS = 200;
 const CODE_REST_POST_SUCCESS = 201;
@@ -32,19 +33,50 @@ export default class ContextService {
   }
 
   /**
-   * Returns an function that creates comments on a WebHook Issue.
+   * Returns a function that creates a comment on a PR.
+   * @param context - Object returned from Probot's EventHook.
+   * @param pr - GHPr Object retrieved from context.
+   * @returns an async function that adds a comment to a PR and resolves
+   * to true if commenting was successful and false otherwise.
+   */
+  public getPRCommenter(
+    context: HookContext,
+    pr: GHPr = this.extractPullRequestFromHook(context)
+  ): (comment: string) => Promise<boolean> {
+    // This works because Github treats both PRs and Issues as 'Github Issues'
+    // in this case.
+    return this.getGHIssueCommentCreator(context, pr);
+  }
+
+  /**
+   * Returns an function that creates comments on an Issue.
    * NOTE: Issue Number is fetched from context object.
    * @param context - Object returned from Probot's EventHook.
-   * @returns an async function that adds a comment on an issue.
+   * @returns an async function that adds a comment on an issue and resolves
+   * to true if commenting was successful and false otherwise.
    */
-  public getIssueCommentCreator(context: HookContext): (comment: string) => Promise<boolean> {
+  public getIssueCommentCreator(
+    context: HookContext,
+    issue: GHIssue = this.extractIssueFromHook(context)
+  ): (comment: string) => Promise<boolean> {
+    return this.getGHIssueCommentCreator(context, issue);
+  }
+
+  /**
+   * Returns an function that creates comments on a `Github Issue`.
+   * @param context - Object returned from Probot's EventHook.
+   * @param issue - Objects that Github classifies as 'Issues'
+   * @returns an async function that adds a comment on a 'Github Issue' and
+   * resolves to true if commenting was successful and false otherwise.
+   */
+  private getGHIssueCommentCreator(context: HookContext, issue: GHIssue | GHPr): (comment: string) => Promise<boolean> {
     return async (comment: string) =>
       (
-        await context.octokit.issues.createComment(
-          context.issue({
-            body: comment,
-          })
-        )
+        await context.octokit.issues.createComment({
+          ...this.getRepoOwnerData(context),
+          issue_number: issue.number,
+          body: comment,
+        })
       ).status === CODE_REST_POST_SUCCESS;
   }
 
@@ -206,6 +238,16 @@ export default class ContextService {
    */
   public extractIssueFromHook(context: HookContext): GHIssue {
     return context.payload.issue as GHIssue;
+  }
+
+  /**
+   * Returns the nested Pull Request data from context.
+   * @param context - Object returned from Probot's EventHook.
+   * @returns GHPr Object containing data about pull request in
+   * context.
+   */
+  public extractPullRequestFromHook(context: HookContext): GHPr {
+    return context.payload.pull_request as GHPr;
   }
 
   /**

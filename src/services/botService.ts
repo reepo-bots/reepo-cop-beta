@@ -17,6 +17,21 @@ export default class BotService {
     this._issueService = new IssueService();
   }
 
+  public async handlePR(context: HookContext, prAction: PRAction) {
+    switch (prAction) {
+      case PRAction.READY_FOR_REVIEW:
+        this._prService.validatePRCommitMessageProposal(
+          this._contextService.extractPullRequestFromHook(context),
+          this._contextService.getPRCommenter(context)
+        );
+      case PRAction.CONVERTED_TO_DRAFT:
+        await this.handlePRLabelReplacement(context, prAction);
+        break;
+      default:
+        throw new Error(`Unhandled PRAction ${prAction}`);
+    }
+  }
+
   /**
    * Replaces existing PR Label with new ones depending on the type of action
    * taking place on said PR.
@@ -24,7 +39,7 @@ export default class BotService {
    * @param prAction - PR's Condition (What action to PR triggered this hook.)
    * @returns promise of true if label replacement was successful, false otherwise.
    */
-  public async handlePRLabelReplacement(context: HookContext, prAction: PRAction): Promise<boolean> {
+  private async handlePRLabelReplacement(context: HookContext, prAction: PRAction): Promise<boolean> {
     if (!(await this.handleLabelValidation(context))) {
       console.log(this.generateLabelValidationFaliureMessage(`PRLabelReplacement: ${prAction}`));
     }
@@ -32,7 +47,7 @@ export default class BotService {
     return this._prService.replaceExistingPRLabels(
       this._contextService.getPRLabelReplacer(context),
       this._contextService.extractLabelsFromPRHook(context),
-      PRAction.READY_FOR_REVIEW
+      prAction
     );
   }
 
@@ -85,10 +100,12 @@ export default class BotService {
       console.log(this.generateLabelValidationFaliureMessage(`AutoIssueLabelling`));
     }
 
-    if (!await this._issueService.performAutomatedLabelling(
-      this._contextService.extractIssueFromHook(context),
-      this._contextService.getIssueLabelReplacer(context)
-    )) {
+    if (
+      !(await this._issueService.performAutomatedLabelling(
+        this._contextService.extractIssueFromHook(context),
+        this._contextService.getIssueLabelReplacer(context)
+      ))
+    ) {
       console.log('Automated Issue Lablling has encountered an error.');
       return false;
     }

@@ -9,7 +9,7 @@ export = (app: Probot) => {
   app.on(
     ['pull_request.opened', 'pull_request.reopened', 'pull_request.ready_for_review'],
     async (context: HookContext) => {
-      await _botService.handlePRLabelReplacement(context, PRAction.READY_FOR_REVIEW);
+      await _botService.handlePR(context, PRAction.READY_FOR_REVIEW);
     }
   );
 
@@ -22,7 +22,7 @@ export = (app: Probot) => {
     // 'as string' is necessary to prevent type checking.
     switch (context.payload.action as string) {
       case 'converted_to_draft':
-        await _botService.handlePRLabelReplacement(context, PRAction.CONVERTED_TO_DRAFT);
+        await _botService.handlePR(context, PRAction.CONVERTED_TO_DRAFT);
         break;
     }
   });
