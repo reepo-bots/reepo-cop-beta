@@ -36,14 +36,26 @@ export default class PRService {
     return labelReplacer(labelNamesToRemove, labelNamesToAdd);
   }
 
+  /**
+   * Validates and posts result of validation directly on PR in Github.
+   * @param ghPr - Github PR Model Object.
+   * @param prCommenter - Async function that makes a comment on a PR given an input string.
+   * @returns a promise that resolves to true if validation process was a success, false
+   * otherwise.
+   */
   public async validatePRCommitMessageProposal(
     ghPr: GHPr,
     prCommenter: (comment: string) => Promise<boolean>
   ): Promise<boolean> {
     const prCommitMessageRegex: RegExp = /Commit Message:[\r\n]+```[\r\n](.*)[\r\n]```/gis;
     const extractedMessageArray: RegExpExecArray | null = prCommitMessageRegex.exec(ghPr.body);
-    const extractedMessage: string = extractedMessageArray ? extractedMessageArray[1].trim() : '';
-    const commitMsgCorrectionMsg: string | null = this.getCommitMessageCorrectionMessage(extractedMessage);
+
+    if (!extractedMessageArray) {
+      return true;
+    }
+
+    const extractedMessage: string = extractedMessageArray[1].trim();
+    const commitMsgCorrectionMsg: string = this.getCommitMessageCorrectionMessage(extractedMessage);
     return await prCommenter(commitMsgCorrectionMsg);
   }
 
@@ -60,7 +72,7 @@ export default class PRService {
     // Ensures every line adheres to a 72 Char Limit.
     const validateCharCheck: (splitMsg: string[]) => string = (splitMsg: string[]) => {
       const MAX_LINE_LEN: number = 72;
-      const CORRECTION_TITLE_SUCCESS: string = `### ✔️ All lines adhere to ${MAX_LINE_LEN} char limit.\n`
+      const CORRECTION_TITLE_SUCCESS: string = `### ✔️ All lines adhere to ${MAX_LINE_LEN} char limit.\n`;
       const CORRECTION_TITLE_FAIL: string = `### ❌ The following lines do not adhere to a ${MAX_LINE_LEN} char limit.`;
       const corrections: string[] = [];
       splitMsg.forEach((msgLine: string) => {
@@ -79,7 +91,7 @@ export default class PRService {
 
     // Ensures there is a space between a title and body (if applicable).
     const validateSpaceBetweenTitleAndBody: (splitMsg: string[]) => string = (splitMsg: string[]) => {
-      const CORRECTION_TITLE_SUCCESS: string = `### ✔️ Commit message contains blank line between Title and Body.\n`
+      const CORRECTION_TITLE_SUCCESS: string = `### ✔️ Commit message contains blank line between Title and Body.\n`;
       const CORRECTION_TITLE_FAIL: string = '### ❌ Commit message is missing a blank line between Title and Body.\n';
 
       if (splitMsg.length > 1) {

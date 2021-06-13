@@ -17,6 +17,12 @@ export default class BotService {
     this._issueService = new IssueService();
   }
 
+  /**
+   * Performs a set of actions on an incoming PR based on its
+   * context type.
+   * @param context - Context Object provided by Probot.
+   * @param prAction - Type of PR context to handle.
+   */
   public async handlePR(context: HookContext, prAction: PRAction) {
     switch (prAction) {
       case PRAction.READY_FOR_REVIEW:
