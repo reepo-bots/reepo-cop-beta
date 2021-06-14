@@ -18,13 +18,38 @@ export default class BotService {
   }
 
   /**
+   * Performs a set of actions on an incoming PR based on its
+   * context type.
+   * @param context - Context Object provided by Probot.
+   * @param prAction - Type of PR context to handle.
+   */
+  public async handlePR(context: HookContext, prAction: PRAction): Promise<boolean> {
+    const prHandlingResults: boolean[] = [];
+
+    if (prAction === PRAction.EDITED || prAction === PRAction.READY_FOR_REVIEW) {
+      prHandlingResults.push(
+        await this._prService.validatePRCommitMessageProposal(
+          this._contextService.extractPullRequestFromHook(context),
+          this._contextService.getPRCommenter(context)
+        )
+      );
+    }
+
+    if (prAction === PRAction.READY_FOR_REVIEW || prAction === PRAction.CONVERTED_TO_DRAFT) {
+      prHandlingResults.push(await this.handlePRLabelReplacement(context, prAction));
+    }
+
+    return prHandlingResults.reduce((previousResults: boolean, currentResult: boolean) => previousResults && currentResult);
+  }
+
+  /**
    * Replaces existing PR Label with new ones depending on the type of action
    * taking place on said PR.
    * @param context - Context Object provided by Probot.
    * @param prAction - PR's Condition (What action to PR triggered this hook.)
    * @returns promise of true if label replacement was successful, false otherwise.
    */
-  public async handlePRLabelReplacement(context: HookContext, prAction: PRAction): Promise<boolean> {
+  private async handlePRLabelReplacement(context: HookContext, prAction: PRAction): Promise<boolean> {
     if (!(await this.handleLabelValidation(context))) {
       console.log(this.generateLabelValidationFaliureMessage(`PRLabelReplacement: ${prAction}`));
     }
@@ -32,7 +57,7 @@ export default class BotService {
     return this._prService.replaceExistingPRLabels(
       this._contextService.getPRLabelReplacer(context),
       this._contextService.extractLabelsFromPRHook(context),
-      PRAction.READY_FOR_REVIEW
+      prAction
     );
   }
 
@@ -85,10 +110,12 @@ export default class BotService {
       console.log(this.generateLabelValidationFaliureMessage(`AutoIssueLabelling`));
     }
 
-    if (!await this._issueService.performAutomatedLabelling(
-      this._contextService.extractIssueFromHook(context),
-      this._contextService.getIssueLabelReplacer(context)
-    )) {
+    if (
+      !(await this._issueService.performAutomatedLabelling(
+        this._contextService.extractIssueFromHook(context),
+        this._contextService.getIssueLabelReplacer(context)
+      ))
+    ) {
       console.log('Automated Issue Lablling has encountered an error.');
       return false;
     }
