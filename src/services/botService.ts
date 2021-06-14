@@ -23,19 +23,23 @@ export default class BotService {
    * @param context - Context Object provided by Probot.
    * @param prAction - Type of PR context to handle.
    */
-  public async handlePR(context: HookContext, prAction: PRAction) {
-    switch (prAction) {
-      case PRAction.READY_FOR_REVIEW:
-        this._prService.validatePRCommitMessageProposal(
+  public async handlePR(context: HookContext, prAction: PRAction): Promise<boolean> {
+    const prHandlingResults: boolean[] = [];
+
+    if (prAction === PRAction.EDITED || prAction === PRAction.READY_FOR_REVIEW) {
+      prHandlingResults.push(
+        await this._prService.validatePRCommitMessageProposal(
           this._contextService.extractPullRequestFromHook(context),
           this._contextService.getPRCommenter(context)
-        );
-      case PRAction.CONVERTED_TO_DRAFT:
-        await this.handlePRLabelReplacement(context, prAction);
-        break;
-      default:
-        throw new Error(`Unhandled PRAction ${prAction}`);
+        )
+      );
     }
+
+    if (prAction === PRAction.READY_FOR_REVIEW || prAction === PRAction.CONVERTED_TO_DRAFT) {
+      prHandlingResults.push(await this.handlePRLabelReplacement(context, prAction));
+    }
+
+    return prHandlingResults.reduce((previousResults: boolean, currentResult: boolean) => previousResults && currentResult);
   }
 
   /**

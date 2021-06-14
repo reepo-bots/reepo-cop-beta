@@ -47,9 +47,17 @@ export default class PRService {
     ghPr: GHPr,
     prCommenter: (comment: string) => Promise<boolean>
   ): Promise<boolean> {
+
+    // Do not check if PR is still in draft.
+    if (ghPr.draft) {
+      return true;
+    }
+
     const prCommitMessageRegex: RegExp = /Commit Message:[\r\n]+```[\r\n](.*)[\r\n]```/gis;
     const extractedMessageArray: RegExpExecArray | null = prCommitMessageRegex.exec(ghPr.body);
 
+    // Do not check if PR does not contain commit message
+    // proposal.
     if (!extractedMessageArray) {
       return true;
     }
@@ -68,6 +76,16 @@ export default class PRService {
   private getCommitMessageCorrectionMessage(commitMsg: string): string {
     const VALIDATION_TITLE = '## Commit Message Validation\n';
     const splitMsg: string[] = commitMsg.split('\n');
+
+    const validateTitleNoPeriod: (splitMsg: string[]) => string = (splitMsg: string[]) => {
+      const CORRECTION_TITLE_SUCCESS: string = `### ✔️ Commit message title does not end with a period.\n`;
+      const CORRECTION_TITLE_FAIL: string = `### ❌ Commit message title ends with a Period.\n`;
+      if (splitMsg.length >=1) {
+        return splitMsg[0][splitMsg[0].length - 1] === '.' ? CORRECTION_TITLE_FAIL : CORRECTION_TITLE_SUCCESS
+      }
+
+      return '';
+    }
 
     // Ensures every line adheres to a 72 Char Limit.
     const validateCharCheck: (splitMsg: string[]) => string = (splitMsg: string[]) => {
@@ -105,6 +123,6 @@ export default class PRService {
       }
     };
 
-    return `${VALIDATION_TITLE}${validateCharCheck(splitMsg)}${validateSpaceBetweenTitleAndBody(splitMsg)}`;
+    return `${VALIDATION_TITLE}${validateTitleNoPeriod(splitMsg)}${validateCharCheck(splitMsg)}${validateSpaceBetweenTitleAndBody(splitMsg)}`;
   }
 }

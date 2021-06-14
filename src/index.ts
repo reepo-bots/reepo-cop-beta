@@ -13,6 +13,10 @@ export = (app: Probot) => {
     }
   );
 
+  app.on('pull_request.edited', async (context: HookContext) => {
+    await _botService.handlePR(context, PRAction.EDITED);
+  });
+
   /**
    * Unfortunately there isn't a pre-defined hook for
    * some PR actions (i.e. Convert to draft) so this callback
