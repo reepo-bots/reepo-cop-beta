@@ -39,7 +39,9 @@ export default class BotService {
       prHandlingResults.push(await this.handlePRLabelReplacement(context, prAction));
     }
 
-    return prHandlingResults.reduce((previousResults: boolean, currentResult: boolean) => previousResults && currentResult);
+    return prHandlingResults.reduce(
+      (previousResults: boolean, currentResult: boolean) => previousResults && currentResult
+    );
   }
 
   /**
