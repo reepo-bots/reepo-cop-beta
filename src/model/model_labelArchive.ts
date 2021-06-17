@@ -47,7 +47,8 @@ export default class LabelArchive {
 
   private findGHLabel(ghLabel: GHLabel): Label | undefined {
     return this.collatePresetLabels().find(
-      (label: Label) => label.name === ghLabel.name && label.color === ghLabel.color && label.desc === ghLabel.color
+      (label: Label) =>
+        label.name === ghLabel.name && label.color === ghLabel.color && label.desc === ghLabel.description
     );
   }
 

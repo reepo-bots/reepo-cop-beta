@@ -6,6 +6,10 @@ import BotService from './services/botService';
 const _botService: BotService = new BotService();
 
 export = (app: Probot) => {
+  app.on('release.created', async (context: HookContext) => {
+    await _botService.updateDraftRelease(context);
+  });
+
   app.on(
     ['pull_request.opened', 'pull_request.reopened', 'pull_request.ready_for_review'],
     async (context: HookContext) => {
@@ -15,6 +19,11 @@ export = (app: Probot) => {
 
   app.on('pull_request.edited', async (context: HookContext) => {
     await _botService.handlePR(context, PRAction.EDITED);
+  });
+
+  app.on('pull_request.merged', async (context: HookContext) => {
+    // Ensure that Changelogs on existing Draft Releases are updated.
+    await _botService.updateDraftRelease(context);
   });
 
   /**
