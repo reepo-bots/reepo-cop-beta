@@ -2,19 +2,41 @@ import LabelService from './labelService';
 import PRService from './prService';
 import ContextService, { HookContext } from './contextService';
 import IssueService from './issueService';
+import ReleaseService from './releaseService';
 import { PRAction } from '../model/model_pr';
+import GHRelease from '../model/model_ghRelease';
 
 export default class BotService {
   private _labelService: LabelService;
   private _prService: PRService;
   private _contextService: ContextService;
   private _issueService: IssueService;
+  private _releaseService: ReleaseService;
 
   constructor() {
     this._labelService = new LabelService();
     this._prService = new PRService();
     this._contextService = new ContextService();
     this._issueService = new IssueService();
+    this._releaseService = new ReleaseService();
+  }
+
+  public async updateDraftRelease(context: HookContext): Promise<boolean> {
+    const existingRelease: GHRelease | undefined = await this._contextService.getLastReleaseRetriever(
+      context,
+      'draft'
+    )();
+
+    if (!existingRelease) {
+      return true;
+    }
+
+    return this._releaseService.updateReleaseChangelog(
+      existingRelease,
+      this._contextService.getLastReleaseRetriever(context, 'published'),
+      this._contextService.getPRRetriever(context),
+      this._contextService.getReleaseBodyUpdater(context)
+    );
   }
 
   /**
@@ -39,7 +61,9 @@ export default class BotService {
       prHandlingResults.push(await this.handlePRLabelReplacement(context, prAction));
     }
 
-    return prHandlingResults.reduce((previousResults: boolean, currentResult: boolean) => previousResults && currentResult);
+    return prHandlingResults.reduce(
+      (previousResults: boolean, currentResult: boolean) => previousResults && currentResult
+    );
   }
 
   /**

@@ -1,4 +1,5 @@
 import { Context, WebhookPayloadWithRepository } from 'probot';
+import GHRelease from '../model/model_ghRelease';
 import GHIssue from '../model/model_ghIssue';
 import GHLabel from '../model/model_ghLabel';
 import GHUser from '../model/model_ghUser';
@@ -46,6 +47,106 @@ export default class ContextService {
     // This works because Github treats both PRs and Issues as 'Github Issues'
     // in this case.
     return this.getGHIssueCommentCreator(context, pr);
+  }
+
+  /**
+   * Returns a function that can update a Release's text body
+   * given an input string.
+   * @param context - Object returned from Probot's EventHook.
+   * @returns an async function that takes a string and uses that
+   * to replace an input Release's body (taken from context).
+   */
+  public getReleaseBodyUpdater(
+    context: HookContext
+  ): (currentRelease: GHRelease, newReleaseBody: string) => Promise<boolean> {
+    return async (currentRelease: GHRelease, newReleaseBody: string) => {
+      const { status }: { status: number } = await context.octokit.rest.repos.updateRelease({
+        ...this.getRepoOwnerData(context),
+        release_id: currentRelease.id,
+        body: newReleaseBody,
+      });
+
+      return status === CODE_REST_POST_SUCCESS;
+    };
+  }
+
+  /**
+   * Returns a function that retrieves a filtered list of
+   * Pull Requests based on context and specifications.
+   * @param context - Object returned from Probot's EventHook.
+   * @returns an array of GHPr Objects.
+   */
+  public getPRRetriever(
+    context: HookContext
+  ): ({
+    pr_per_page,
+    pages,
+    filter,
+    date_range,
+  }: {
+    pr_per_page?: number;
+    pages?: number;
+    filter?: 'draft' | 'merged';
+    date_range?: { startDate?: Date; endDate?: Date };
+  }) => Promise<GHPr[]> {
+    return async ({
+      pr_per_page,
+      pages,
+      filter,
+      date_range,
+    }: {
+      pr_per_page?: number;
+      pages?: number;
+      filter?: 'draft' | 'merged';
+      date_range?: { startDate?: Date; endDate?: Date };
+    }) => {
+      // Fetched Data De-Construction
+      const { data, status }: { data: any[] | GHPr[]; status: number } = await context.octokit.rest.pulls.list({
+        ...this.getRepoOwnerData(context),
+        state: 'all',
+        per_page: pr_per_page ? 50 : pr_per_page, // * DEFAULT: 50
+        page: pages ? 1 : pages, // * DEFAULT: 1
+      });
+
+      if (status !== CODE_REST_REQUEST_SUCCESS) {
+        return [];
+      }
+
+      // * Sub-Function used to ensure that submitted Date-Time Strings
+      // * fall within the user specified range (if one is provided.)
+      const isPRTimeConstraintMet: (...comparisonTimeStrings: string[]) => boolean = (
+        ...comparisonTimeStrings: string[]
+      ) => {
+        // If no Date-Range is provided or no params
+        // are provided then time constraint is always met.
+        if (!date_range) {
+          return true;
+        }
+
+        const rangeStart: number = (date_range.startDate ? date_range.startDate : new Date(1)).getTime();
+        const rangeEnd: number = (date_range.endDate ? date_range.endDate : new Date()).getTime();
+        const comparisonTimes: number[] = comparisonTimeStrings.map((comparisonTimeString: string) =>
+          new Date(comparisonTimeString).getTime()
+        );
+
+        return comparisonTimes.some((time: number | null) => {
+          if (!time) {
+            return true;
+          }
+          return time >= rangeStart && time <= rangeEnd;
+        });
+      };
+
+      switch (filter) {
+        case 'draft':
+          return data.filter((pr: GHPr) => pr.draft && isPRTimeConstraintMet(pr.updated_at));
+        case 'merged':
+          return data.filter((pr: GHPr) => pr.merged_at && isPRTimeConstraintMet(pr.merged_at));
+        default:
+          return data as GHPr[];
+        // TODO: Add support for closed PRs
+      }
+    };
   }
 
   /**
@@ -203,6 +304,31 @@ export default class ContextService {
     };
   }
 
+  public getLastReleaseRetriever(
+    context: HookContext,
+    type: 'draft' | 'published'
+  ): () => Promise<GHRelease | undefined> {
+    return async () => {
+      const { data, status }: { data: GHRelease[] | any[]; status: number } = await context.octokit.repos.listReleases({
+        ...this.getRepoOwnerData(context),
+      });
+
+      if (status !== CODE_REST_REQUEST_SUCCESS) {
+        return undefined;
+      }
+
+      return data
+        .filter((release: GHRelease) =>
+          type === 'draft' ? release.draft && !release.published_at : !release.draft && release.published_at
+        )
+        .sort(
+          (releaseA: GHRelease, releaseB: GHRelease) =>
+            new Date(releaseA.published_at!).getTime() - new Date(releaseB.published_at!).getTime()
+        )
+        .pop();
+    };
+  }
+
   /**
    * Returns a function that with relevant inputs,
    * removes specified labels from a PR and replaces them
@@ -247,7 +373,7 @@ export default class ContextService {
    * context.
    */
   public extractPullRequestFromHook(context: HookContext): GHPr {
-    return context.payload.pull_request as GHPr;
+    return context.payload?.pull_request as GHPr;
   }
 
   /**
@@ -256,6 +382,14 @@ export default class ContextService {
    * @returns GHUser author of Issue in context.
    */
   public extractUserFromIssueHook(context: HookContext): GHUser {
-    return this.extractIssueFromHook(context)?.user;
+    return this.extractIssueFromHook(context)?.user as GHUser;
+  }
+
+  /**
+   * Retrieves the Release from context.
+   * @param context - Object returned from Probot's EventHook.
+   */
+  public extractReleaseFromHook(context: HookContext): GHRelease {
+    return context.payload?.release as GHRelease;
   }
 }
