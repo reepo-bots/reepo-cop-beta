@@ -83,7 +83,7 @@ export default class ReleaseService {
     const changelogCollation: { [changelogHeader: string]: string } = {};
 
     pullRequests.forEach((pullRequest: PullRequest) => {
-      const labelName: string | undefined = pullRequest.getIssueLabel()?.name;
+      const labelName: string | undefined = pullRequest.getAspectLabel()?.name;
 
       // * Complex 1 Liner that Updates / Creates new Collated Changelog.
       changelogCollation[labelName ? this.headerGenerator(labelName) : this.OTHERS_HEADER] = changelogCollation[

@@ -81,9 +81,9 @@ export default class IssueService {
   ) {
     const presetLabels: Label[] = LABEL_ARCHIVE.collatePresetLabels();
 
-    const autoIssueLabel: Label | undefined = presetLabels.find(
+    const autoAspectLabel: Label | undefined = presetLabels.find(
       (label: Label) =>
-        label.name.includes(LabelCollectionType.IssueCollection) && ghIssue.title.toLowerCase().includes(`${label.type.toLowerCase()}:`)
+        label.name.includes(LabelCollectionType.AspectCollection) && ghIssue.title.toLowerCase().includes(`${label.type.toLowerCase()}:`)
     );
 
     const autoPriorityLabel: Label | undefined = presetLabels.find(
@@ -92,15 +92,15 @@ export default class IssueService {
         ghIssue.title.toLowerCase().includes(`[${label.type.toLowerCase().substr(0, 1)}]`)
     );
 
-    if (!autoIssueLabel && !autoPriorityLabel) {
+    if (!autoAspectLabel && !autoPriorityLabel) {
       return true;
     }
 
     const existingLabels: string[] = [];
     const labelNamesToAdd: string[] = [];
-    if (autoIssueLabel) {
-      labelNamesToAdd.push(autoIssueLabel.name);
-      existingLabels.push(...LabelService.extractLabelNames(LabelCollectionType.IssueCollection, ghIssue.labels));
+    if (autoAspectLabel) {
+      labelNamesToAdd.push(autoAspectLabel.name);
+      existingLabels.push(...LabelService.extractLabelNames(LabelCollectionType.AspectCollection, ghIssue.labels));
     }
     if (autoPriorityLabel) {
       labelNamesToAdd.push(autoPriorityLabel.name);

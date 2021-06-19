@@ -1,51 +1,44 @@
 import LabelArchive from '../model/model_labelArchive';
 import Label from '../model/model_label';
-import { PRType, PriorityType, IssueType, ChangelogType } from '../model/model_label_type';
+import { PRType, PriorityType, AspectType, ChangelogType, IssueType } from '../model/model_label_type';
 import LabelCollection, { LabelCollectionType } from '../model/model_labelCollection';
 
 export const LABEL_ARCHIVE: LabelArchive = new LabelArchive([
-  new LabelCollection(LabelCollectionType.IssueCollection, [
+  new LabelCollection(LabelCollectionType.AspectCollection, [
     new Label(
-      `🐞 ${LabelCollectionType.IssueCollection}.${IssueType.Bug}`,
+      `🐞 ${LabelCollectionType.AspectCollection}.${AspectType.Bug}`,
       'This issue describes a bug.',
       'AA5117',
       'bug',
-      IssueType.Bug
+      AspectType.Bug
     ),
     new Label(
-      `⚙️ ${LabelCollectionType.IssueCollection}.${IssueType.Process}`,
+      `⚙️ ${LabelCollectionType.AspectCollection}.${AspectType.Process}`,
       'This issue describes an element of the project\'s process.',
       'F0FF01',
       'process',
-      IssueType.Process
+      AspectType.Process
     ),
     new Label(
-      `💡 ${LabelCollectionType.IssueCollection}.${IssueType.Feature}`,
+      `💡 ${LabelCollectionType.AspectCollection}.${AspectType.Feature}`,
       'This issue describes a new feature.',
       '120BB0',
       'feature',
-      IssueType.Feature
+      AspectType.Feature
     ),
     new Label(
-      `📈 ${LabelCollectionType.IssueCollection}.${IssueType.Enhancement}`,
+      `📈 ${LabelCollectionType.AspectCollection}.${AspectType.Enhancement}`,
       'This issue describes an enhancement to an existing feature.',
       '19504B',
       'enhance',
-      IssueType.Enhancement
+      AspectType.Enhancement
     ),
     new Label(
-      `📚 ${LabelCollectionType.IssueCollection}.${IssueType.Documentation}`,
+      `📚 ${LabelCollectionType.AspectCollection}.${AspectType.Documentation}`,
       'This issue describes a change to the existing documentation.',
       '0075CA',
       'doc',
-      IssueType.Documentation
-    ),
-    new Label(
-      `❌ ${LabelCollectionType.IssueCollection}.${IssueType.WontFix}`,
-      'This issue describes a suggestion that will not be fixed.',
-      'FFFFFF',
-      'wontfix',
-      IssueType.WontFix
+      AspectType.Documentation
     )
   ]),
   new LabelCollection(LabelCollectionType.PRCollection, [
@@ -115,6 +108,29 @@ export const LABEL_ARCHIVE: LabelArchive = new LabelArchive([
       '000000',
       ChangelogType.DoNotList.toLowerCase(),
       ChangelogType.DoNotList
+    )
+  ]),
+  new LabelCollection(LabelCollectionType.IssueCollection, [
+    new Label(
+      `❌ ${LabelCollectionType.IssueCollection}.${IssueType.WontFix}`,
+      'This issue describes a suggestion that will not be fixed.',
+      'FFFFFF',
+      IssueType.WontFix.toLowerCase(),
+      IssueType.WontFix
+    ),
+    new Label(
+      `👯‍♂️ ${LabelCollectionType.IssueCollection}.${IssueType.Duplicate}`,
+      'This issue describes a suggestion that will not be fixed.',
+      'FFFFFF',
+      IssueType.Duplicate.toLowerCase(),
+      IssueType.Duplicate
+    ),
+    new Label(
+      `🥇 ${LabelCollectionType.IssueCollection}.${IssueType.GoodFirstIssue}`,
+      'This issue describes a suggestion that will not be fixed.',
+      'FFFFFF',
+      'good first issue',
+      IssueType.GoodFirstIssue
     )
   ])
 ]);

@@ -4,8 +4,9 @@ import { LabelCollectionType } from '../model/model_labelCollection';
 import { LABEL_ARCHIVE } from '../constants/const_labels';
 import { PRAction } from '../model/model_pr';
 import { PRType } from '../model/model_label_type';
-import GHPr from '../model/model_ghPR';
+import GHPr, { GHPrHandler } from '../model/model_ghPR';
 import Label from '../model/model_label';
+import GHIssue, { GHIssueHandler } from '../model/model_ghIssue';
 
 export default class PRService {
   /**
@@ -37,6 +38,67 @@ export default class PRService {
     return labelReplacer(labelNamesToRemove, labelNamesToAdd);
   }
 
+  private getAspectLabellingPriority(firstLineOfBody?: string): 'Linked-Issue' | 'Manual' | null {
+    return firstLineOfBody
+      ? firstLineOfBody.includes(`Type:`)
+        ? 'Manual'
+        : firstLineOfBody.includes(`Fixes`)
+        ? 'Linked-Issue'
+        : null
+      : null;
+  }
+
+  private fetchManualAspectLabelName(firstLineOfBody: string): string {
+    const typeClassificationRegex: RegExp = /Type: (.*)/g;
+    const extractedTypeArray: RegExpExecArray | null = typeClassificationRegex.exec(firstLineOfBody);
+
+    if (!extractedTypeArray) {
+      return '';
+    }
+
+    const [_input, extractedTypeLabelName, ..._] = extractedTypeArray;
+    const prIssueTypeLabel: Label | undefined = LABEL_ARCHIVE.collatePresetLabels(
+      LabelCollectionType.AspectCollection,
+      LabelCollectionType.ChangelogCollection
+    ).find((label: Label) => label.name.includes(extractedTypeLabelName));
+
+    if (!prIssueTypeLabel) {
+      return '';
+    }
+
+    return prIssueTypeLabel.name;
+  }
+
+  private async fetchLinkedAspectLabelName(
+    firstLineOfBody: string,
+    issueRetriever: (issueNumber: number) => Promise<GHIssue | undefined>
+  ): Promise<string> {
+    const linkedIssueRegex: RegExp = /Fixes #(.*)/g;
+    const extractedIssueArray: RegExpExecArray | null = linkedIssueRegex.exec(firstLineOfBody);
+
+    if (!extractedIssueArray) {
+      return '';
+    }
+
+    const [_inputStr, extractedIssueNumber, ..._] = extractedIssueArray;
+    const linkedIssue: GHIssue | undefined = await issueRetriever(+extractedIssueNumber);
+
+    if (!linkedIssue) {
+      return '';
+    }
+
+    const aspectLabel: GHLabel | undefined = GHIssueHandler.FindLabelByType(
+      linkedIssue,
+      LabelCollectionType.AspectCollection
+    );
+
+    if (!aspectLabel) {
+      return '';
+    }
+
+    return aspectLabel.name;
+  }
+
   /**
    *
    * @param ghPr - Github PR Model Object.
@@ -44,39 +106,35 @@ export default class PRService {
    * with a newly specified set.
    * @returns a promise of true if Issue Label assignment was successful false otherwise.
    */
-  public async assignIssueLabel(
+  public async assignAspectLabel(
     ghPr: GHPr,
-    prLabelReplacer: (removalLabelName: string[], replacementLabelNames: string[]) => Promise<boolean>
+    prLabelReplacer: (removalLabelName: string[], replacementLabelNames: string[]) => Promise<boolean>,
+    issueRetriever: (issueNumber: number) => Promise<GHIssue | undefined>
   ): Promise<boolean> {
     if (ghPr?.draft) {
       return true;
     }
 
     const firstLineOfBody: string | undefined = ghPr.body.split('\n')[0];
-    const isTypeClassified: boolean = firstLineOfBody ? firstLineOfBody.includes(`Type:`) : false;
+    const labellingPriority: 'Linked-Issue' | 'Manual' | null = this.getAspectLabellingPriority(firstLineOfBody);
+    const existingAspectLabel: GHLabel | undefined = GHPrHandler.FindLabelByType(ghPr, LabelCollectionType.AspectCollection);
+    const aspectLabelNamesToReplace: string[] = existingAspectLabel ? [existingAspectLabel.name] : []
 
-    if (!isTypeClassified) {
+    if (!labellingPriority) {
       return true;
     }
 
-    const typeClassificationRegex: RegExp = /Type: (.*)/g;
-    const extractedTypeArray: RegExpExecArray | null = typeClassificationRegex.exec(firstLineOfBody);
-
-    if (!extractedTypeArray) {
-      return true;
+    switch (labellingPriority) {
+      case 'Manual':
+        const manualLabelName: string = this.fetchManualAspectLabelName(firstLineOfBody);
+        return prLabelReplacer(aspectLabelNamesToReplace, manualLabelName ? [manualLabelName] : []);
+      case 'Linked-Issue':
+        const linkedLabelName: string = await this.fetchLinkedAspectLabelName(firstLineOfBody, issueRetriever);
+        await prLabelReplacer(aspectLabelNamesToReplace, linkedLabelName ? [linkedLabelName] : []);
+        return true;
+      default:
+        return true;
     }
-
-    const [_input, extractedTypeLabelName, ..._] = extractedTypeArray;
-    const prIssueTypeLabel: Label | undefined = LABEL_ARCHIVE.collatePresetLabels(
-      LabelCollectionType.IssueCollection,
-      LabelCollectionType.ChangelogCollection
-    ).find((label: Label) => label.name.includes(extractedTypeLabelName));
-
-    if (!prIssueTypeLabel) {
-      return true;
-    }
-
-    return await prLabelReplacer([], [prIssueTypeLabel.name]);
   }
 
   /**

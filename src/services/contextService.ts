@@ -5,8 +5,8 @@ import GHLabel from '../model/model_ghLabel';
 import GHUser from '../model/model_ghUser';
 import GHPr from '../model/model_ghPR';
 
-const CODE_REST_REQUEST_SUCCESS = 200;
-const CODE_REST_POST_SUCCESS = 201;
+const CODE_REST_REQUEST_SUCCESS: number = 200;
+const CODE_REST_POST_SUCCESS: number = 201;
 
 /**
  * Meant to help abbreviate context object type.
@@ -188,8 +188,19 @@ export default class ContextService {
    * @returns an async function that fetches Labels from Github.
    */
   public getRepoLabelsRetriever(context: HookContext): () => Promise<GHLabel[]> {
-    return async () =>
-      (await context.octokit.issues.listLabelsForRepo({ ...this.getRepoOwnerData(context) })).data as GHLabel[];
+    return async () => {
+      try {
+        const { data, status }: { data: GHLabel[], status: number } = await context.octokit.issues.listLabelsForRepo({ ...this.getRepoOwnerData(context) });
+      
+        if (status !== CODE_REST_REQUEST_SUCCESS) {
+          return [];
+        }
+        
+        return data;
+      } catch (e: any) {
+        return [];
+      }
+    };
   }
 
   /**
@@ -200,15 +211,19 @@ export default class ContextService {
    * promises true if label creation is successful.
    */
   public getLabelCreator(context: HookContext): (name: string, desc: string, color: string) => Promise<boolean> {
-    return async (name: string, desc: string, color: string) =>
-      (
-        await context.octokit.rest.issues.createLabel({
+    return async (name: string, desc: string, color: string) => {
+      try {
+        const { status }: { data: any; status: number } = await context.octokit.rest.issues.createLabel({
           ...this.getRepoOwnerData(context),
           name: name,
           description: desc,
           color: color,
-        })
-      ).status === CODE_REST_POST_SUCCESS;
+        });
+        return status === CODE_REST_POST_SUCCESS;
+      } catch (e: any) {
+        return false;
+      }
+    };
   }
 
   /**
@@ -237,16 +252,20 @@ export default class ContextService {
   public getLabelUpdater(
     context: HookContext
   ): (oldName: string, newName: string, desc: string, color: string) => Promise<boolean> {
-    return async (oldName: string, newName: string, desc: string, color: string) =>
-      (
-        await context.octokit.rest.issues.updateLabel({
+    return async (oldName: string, newName: string, desc: string, color: string) => {
+      try {
+        const { status }: { status: number } = await context.octokit.rest.issues.updateLabel({
           ...this.getRepoOwnerData(context),
           name: oldName,
           new_name: newName,
           description: desc,
           color: color,
-        })
-      ).status === CODE_REST_REQUEST_SUCCESS;
+        });
+        return status === CODE_REST_REQUEST_SUCCESS;
+      } catch (e: any) {
+        return false;
+      }
+    };
   }
 
   /**
@@ -257,7 +276,7 @@ export default class ContextService {
    * @param issueNumber - Number of Issue that is to have its labels replaced.
    * @returns an async function to replace labels on an issue.
    */
-  public getIssueLabelReplacer(
+  public getAspectLabelReplacer(
     context: HookContext,
     issueNumber?: number
   ): (removalLabelName: string[], replacementLabelNames: string[]) => Promise<boolean> {
@@ -329,6 +348,21 @@ export default class ContextService {
     };
   }
 
+  public getIssueRetriever(context: HookContext): (issueNumber: number) => Promise<GHIssue | undefined> {
+    return async (issueNumber: number) => {
+      const { data, status }: { data: any; status: number } = await context.octokit.rest.issues.get({
+        ...this.getRepoOwnerData(context),
+        issue_number: issueNumber,
+      });
+
+      if (status !== CODE_REST_REQUEST_SUCCESS) {
+        return undefined;
+      }
+
+      return data as GHIssue;
+    };
+  }
+
   /**
    * Returns a function that with relevant inputs,
    * removes specified labels from a PR and replaces them
@@ -342,7 +376,7 @@ export default class ContextService {
     pullRequestNumber?: number
   ): (removalLabelName: string[], replacementLabelNames: string[]) => Promise<boolean> {
     // According to Github, for this case Issues and PRs are treated the same.
-    return this.getIssueLabelReplacer(
+    return this.getAspectLabelReplacer(
       context,
       pullRequestNumber ? pullRequestNumber : context.payload.pull_request?.number!
     );

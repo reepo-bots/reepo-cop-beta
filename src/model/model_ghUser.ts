@@ -1,4 +1,5 @@
 export default interface GHUser {
+  [key: string]: any,
   login: string;
   id: number;
   node_id: string;

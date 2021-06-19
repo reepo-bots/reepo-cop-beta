@@ -55,9 +55,10 @@ export default class BotService {
           this._contextService.extractPullRequestFromHook(context),
           this._contextService.getPRCommenter(context)
         ),
-        await this._prService.assignIssueLabel(
+        await this._prService.assignAspectLabel(
           this._contextService.extractPullRequestFromHook(context),
-          this._contextService.getPRLabelReplacer(context)
+          this._contextService.getPRLabelReplacer(context),
+          this._contextService.getIssueRetriever(context)
         )
       );
     }
@@ -79,9 +80,7 @@ export default class BotService {
    * @returns promise of true if label replacement was successful, false otherwise.
    */
   private async handlePRLabelReplacement(context: HookContext, prAction: PRAction): Promise<boolean> {
-    if (!(await this.handleLabelValidation(context))) {
-      console.log(this.generateLabelValidationFaliureMessage(`PRLabelReplacement: ${prAction}`));
-    }
+    await this.handleLabelValidation(context);
 
     return this._prService.replaceExistingPRLabels(
       this._contextService.getPRLabelReplacer(context),
@@ -135,14 +134,12 @@ export default class BotService {
    * @returns a promise of true if automated labelling was a success, false otherwise.
    */
   public async handleAutomatedIssueLabelling(context: HookContext): Promise<boolean> {
-    if (!(await this.handleLabelValidation(context))) {
-      console.log(this.generateLabelValidationFaliureMessage(`AutoIssueLabelling`));
-    }
+    await this.handleLabelValidation(context);
 
     if (
       !(await this._issueService.performAutomatedLabelling(
         this._contextService.extractIssueFromHook(context),
-        this._contextService.getIssueLabelReplacer(context)
+        this._contextService.getAspectLabelReplacer(context)
       ))
     ) {
       console.log('Automated Issue Lablling has encountered an error.');
@@ -165,16 +162,5 @@ export default class BotService {
       this._contextService.getLabelUpdater(context),
       this._contextService.getLabelCreator(context)
     );
-  }
-
-  /**
-   * Generates a string based on the location of faliure while
-   * using label validation.
-   * @param location - string representing faliure location.
-   * @returns a string that communicates a faliure in the label
-   * validation step.
-   */
-  private generateLabelValidationFaliureMessage(location: string) {
-    return `Label Validation failed in ${location}. Proceed with caution.`;
   }
 }
