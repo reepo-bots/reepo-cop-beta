@@ -18,7 +18,8 @@ export default class PRService {
   public replaceExistingPRLabels(
     labelReplacer: (removalLabelName: string[], replacementLabelNames: string[]) => Promise<boolean>,
     existingLabels: GHLabel[],
-    prAction: PRAction
+    prAction: PRAction,
+    pr: GHPr
   ): Promise<boolean> {
     const labelNamesToRemove: string[] = LabelService.extractLabelNames(
       LabelCollectionType.PRCollection,
@@ -28,7 +29,7 @@ export default class PRService {
     switch (prAction) {
       case PRAction.READY_FOR_REVIEW:
       case PRAction.OPENED:
-        labelNamesToAdd.push(LABEL_ARCHIVE.getLabel(LabelCollectionType.PRCollection, PRType.ToReview)?.name!);
+        labelNamesToAdd.push(LABEL_ARCHIVE.getLabel(LabelCollectionType.PRCollection, pr?.draft ? PRType.OnGoing : PRType.ToReview)?.name!);
         break;
       case PRAction.CONVERTED_TO_DRAFT:
         labelNamesToAdd.push(LABEL_ARCHIVE.getLabel(LabelCollectionType.PRCollection, PRType.OnGoing)?.name!);
