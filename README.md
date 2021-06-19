@@ -1,33 +1,26 @@
-# reepo-cop
+<p align="center">
+  <img src="assets/img/doc_logo.png" width=600px />
+</p>
 
-> A GitHub App built with [Probot](https://github.com/probot/probot) that A Probot App that helps you maintain your repository
+<h2 align="center">reepo-cop</h2>
+<h4 align="center">A Probot Application to help <strong>police</strong> your repository</h4>
 
-## Setup
+---
 
-```sh
-# Install dependencies
-npm install
+This aims to help standardize and automate your repository management in a way that helps you save time and effort, allowing you to focus on your projects than the minutae of administration.
 
-# Run the bot
-npm start
-```
+## Some Features
+- Automated Issue / Pull Request Labelling
+  - **Issues**: Autoamtically labels your issues using keywords in the title of your issues.
+  - **Pull Requests**: Automatically labels your Pull Requests based on their status (i.e. Draft / Ready for Review)
 
-## Docker
+- Automatic Changelog Updating
+  - Updates your Changelogs on a Draft Release based on merged pull requests between your last release and current release. (Uses `issue.*` labels given to your PRs as headers).
 
-```sh
-# 1. Build container
-docker build -t reepo-cop .
+---
 
-# 2. Start container
-docker run -e APP_ID=<app-id> -e PRIVATE_KEY=<pem-value> reepo-cop
-```
+Feel free to fork this and customize it to your own needs 😃
 
-## Contributing
-
-If you have suggestions for how reepo-cop could be improved, or want to report a bug, open an issue! We'd love all and any contributions.
-
-For more, check out the [Contributing Guide](CONTRIBUTING.md).
-
-## License
-
-[ISC](LICENSE) © 2021 ptvrajsk <ptvrajsk@gmail.com>
+## Reference Docs
+- [Probot Bootstrap Doc](../docs/probot_doc.md)
+- [**reepo-cop**'s development](../docs/dev.md)
