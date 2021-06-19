@@ -1,6 +1,6 @@
 import LabelArchive from '../model/model_labelArchive';
 import Label from '../model/model_label';
-import { PRType, PriorityType, IssueType } from '../model/model_label_type';
+import { PRType, PriorityType, IssueType, ChangelogType } from '../model/model_label_type';
 import LabelCollection, { LabelCollectionType } from '../model/model_labelCollection';
 
 export const LABEL_ARCHIVE: LabelArchive = new LabelArchive([
@@ -106,6 +106,15 @@ export const LABEL_ARCHIVE: LabelArchive = new LabelArchive([
       'FE000A',
       PriorityType.Low.toLowerCase(),
       PriorityType.Low
+    )
+  ]),
+  new LabelCollection(LabelCollectionType.ChangelogCollection, [
+    new Label(
+      `👻 ${LabelCollectionType.ChangelogCollection}.${ChangelogType.DoNotList}`,
+      "This Pull Request will NOT be listed automatically in the Release Changelog",
+      'FFFFFF',
+      ChangelogType.DoNotList.toLowerCase(),
+      ChangelogType.DoNotList
     )
   ])
 ]);

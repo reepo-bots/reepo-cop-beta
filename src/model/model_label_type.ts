@@ -27,5 +27,9 @@ export enum PriorityType {
   Low = 'Low'
 }
 
-type LabelType = PRType | IssueType | PriorityType;
+export enum ChangelogType {
+  DoNotList = 'DoNotList'
+}
+
+type LabelType = PRType | IssueType | PriorityType | ChangelogType;
 export default LabelType;
