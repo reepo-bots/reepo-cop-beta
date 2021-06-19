@@ -12,7 +12,7 @@ export default class LabelService {
    * @param ghLabels - Github Labels to be filtered.
    * @returns object containing missing labels -> Label[] & outdatedLabels -> Map<GHLabel, Label>.
    */
-  public static fetchMissingAndOutdatedLabels(ghLabels: GHLabel[]): {
+  public static getMissingAndOutdatedLabels(ghLabels: GHLabel[]): {
     missingLabels: Label[];
     outdatedLabels: Map<GHLabel, Label>;
   } {
@@ -112,7 +112,7 @@ export default class LabelService {
     repoLabelCreator: (name: string, desc: string, color: string) => Promise<boolean>
   ): Promise<boolean> {
     const { missingLabels, outdatedLabels }: { missingLabels: Label[]; outdatedLabels: Map<GHLabel, Label> } =
-      LabelService.fetchMissingAndOutdatedLabels(await repoLabelsRetriever());
+      LabelService.getMissingAndOutdatedLabels(await repoLabelsRetriever());
 
     const updateResult: boolean = await LabelService.updateLabels(outdatedLabels, repoLabelUpdater);
     const createResult: boolean = await LabelService.createLabels(missingLabels, repoLabelCreator);

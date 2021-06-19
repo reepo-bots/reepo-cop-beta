@@ -111,8 +111,8 @@ export const LABEL_ARCHIVE: LabelArchive = new LabelArchive([
   new LabelCollection(LabelCollectionType.ChangelogCollection, [
     new Label(
       `👻 ${LabelCollectionType.ChangelogCollection}.${ChangelogType.DoNotList}`,
-      "This Pull Request will NOT be listed automatically in the Release Changelog",
-      'FFFFFF',
+      "This Pull Request will NOT be listed in the Release Changelog",
+      '000000',
       ChangelogType.DoNotList.toLowerCase(),
       ChangelogType.DoNotList
     )

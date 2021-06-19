@@ -47,12 +47,17 @@ export default class BotService {
    */
   public async handlePR(context: HookContext, prAction: PRAction): Promise<boolean> {
     const prHandlingResults: boolean[] = [];
+    await this.handleLabelValidation(context);
 
     if (prAction === PRAction.EDITED || prAction === PRAction.READY_FOR_REVIEW) {
       prHandlingResults.push(
         await this._prService.validatePRCommitMessageProposal(
           this._contextService.extractPullRequestFromHook(context),
           this._contextService.getPRCommenter(context)
+        ),
+        await this._prService.assignIssueLabel(
+          this._contextService.extractPullRequestFromHook(context),
+          this._contextService.getPRLabelReplacer(context)
         )
       );
     }
@@ -154,7 +159,7 @@ export default class BotService {
    * @returns A promise of true if label validation was successful and
    * false otherwise.
    */
-  private async handleLabelValidation(context: HookContext): Promise<boolean> {
+  public async handleLabelValidation(context: HookContext): Promise<boolean> {
     return await this._labelService.validateLabelsOnGihtub(
       this._contextService.getRepoLabelsRetriever(context),
       this._contextService.getLabelUpdater(context),

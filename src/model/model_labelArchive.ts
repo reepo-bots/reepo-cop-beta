@@ -20,8 +20,11 @@ export default class LabelArchive {
     return presetSubstrMap;
   }
 
-  public collatePresetLabels(): Label[] {
+  public collatePresetLabels(...collections: LabelCollectionType[]): Label[] {
     return this._labelCollections.flatMap((labelCollection: LabelCollection) => {
+      if (collections.length && !collections.includes(labelCollection.collectionType)) {
+        return [];
+      }
       return labelCollection.allLabels;
     });
   }

@@ -44,7 +44,6 @@ export default class PullRequest {
    * @returns Label that is an 'Issue' Label.
    */
   public getIssueLabel(): Label | undefined {
-    // console.log(this._labels);
     return this._labels.find((label: Label) => label.name.includes(LabelCollectionType.IssueCollection));
   }
 

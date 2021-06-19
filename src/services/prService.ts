@@ -5,6 +5,7 @@ import { LABEL_ARCHIVE } from '../constants/const_labels';
 import { PRAction } from '../model/model_pr';
 import { PRType } from '../model/model_label_type';
 import GHPr from '../model/model_ghPR';
+import Label from '../model/model_label';
 
 export default class PRService {
   /**
@@ -37,6 +38,48 @@ export default class PRService {
   }
 
   /**
+   *
+   * @param ghPr - Github PR Model Object.
+   * @param prLabelReplacer - Function that removes and replaces a set of labels
+   * with a newly specified set.
+   * @returns a promise of true if Issue Label assignment was successful false otherwise.
+   */
+  public async assignIssueLabel(
+    ghPr: GHPr,
+    prLabelReplacer: (removalLabelName: string[], replacementLabelNames: string[]) => Promise<boolean>
+  ): Promise<boolean> {
+    if (ghPr?.draft) {
+      return true;
+    }
+
+    const firstLineOfBody: string | undefined = ghPr.body.split('\n')[0];
+    const isTypeClassified: boolean = firstLineOfBody ? firstLineOfBody.includes(`Type:`) : false;
+
+    if (!isTypeClassified) {
+      return true;
+    }
+
+    const typeClassificationRegex: RegExp = /Type: (.*)/g;
+    const extractedTypeArray: RegExpExecArray | null = typeClassificationRegex.exec(firstLineOfBody);
+
+    if (!extractedTypeArray) {
+      return true;
+    }
+
+    const [_input, extractedTypeLabelName, ..._] = extractedTypeArray;
+    const prIssueTypeLabel: Label | undefined = LABEL_ARCHIVE.collatePresetLabels(
+      LabelCollectionType.IssueCollection,
+      LabelCollectionType.ChangelogCollection
+    ).find((label: Label) => label.name.includes(extractedTypeLabelName));
+
+    if (!prIssueTypeLabel) {
+      return true;
+    }
+
+    return await prLabelReplacer([], [prIssueTypeLabel.name]);
+  }
+
+  /**
    * Validates and posts result of validation directly on PR in Github.
    * @param ghPr - Github PR Model Object.
    * @param prCommenter - Async function that makes a comment on a PR given an input string.
@@ -47,9 +90,8 @@ export default class PRService {
     ghPr: GHPr,
     prCommenter: (comment: string) => Promise<boolean>
   ): Promise<boolean> {
-
     // Do not check if PR is still in draft.
-    if (ghPr.draft) {
+    if (ghPr?.draft) {
       return true;
     }
 
@@ -80,12 +122,12 @@ export default class PRService {
     const validateTitleNoPeriod: (splitMsg: string[]) => string = (splitMsg: string[]) => {
       const CORRECTION_TITLE_SUCCESS: string = `### ✔️ Commit message title does not end with a period.\n`;
       const CORRECTION_TITLE_FAIL: string = `### ❌ Commit message title ends with a Period.\n`;
-      if (splitMsg.length >=1) {
-        return splitMsg[0][splitMsg[0].length - 1] === '.' ? CORRECTION_TITLE_FAIL : CORRECTION_TITLE_SUCCESS
+      if (splitMsg.length >= 1) {
+        return splitMsg[0][splitMsg[0].length - 1] === '.' ? CORRECTION_TITLE_FAIL : CORRECTION_TITLE_SUCCESS;
       }
 
       return '';
-    }
+    };
 
     // Ensures every line adheres to a 72 Char Limit.
     const validateCharCheck: (splitMsg: string[]) => string = (splitMsg: string[]) => {
@@ -123,6 +165,8 @@ export default class PRService {
       }
     };
 
-    return `${VALIDATION_TITLE}${validateTitleNoPeriod(splitMsg)}${validateCharCheck(splitMsg)}${validateSpaceBetweenTitleAndBody(splitMsg)}`;
+    return `${VALIDATION_TITLE}${validateTitleNoPeriod(splitMsg)}${validateCharCheck(
+      splitMsg
+    )}${validateSpaceBetweenTitleAndBody(splitMsg)}`;
   }
 }
