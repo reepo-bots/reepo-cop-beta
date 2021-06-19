@@ -85,7 +85,8 @@ export default class BotService {
     return this._prService.replaceExistingPRLabels(
       this._contextService.getPRLabelReplacer(context),
       this._contextService.extractLabelsFromPRHook(context),
-      prAction
+      prAction,
+      this._contextService.extractPullRequestFromHook(context)
     );
   }
 

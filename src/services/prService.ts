@@ -28,6 +28,7 @@ export default class PRService {
     const labelNamesToAdd: string[] = [];
     switch (prAction) {
       case PRAction.READY_FOR_REVIEW:
+        labelNamesToAdd.push(LABEL_ARCHIVE.getLabel(LabelCollectionType.PRCollection, PRType.ToReview)?.name!);
       case PRAction.OPENED:
         labelNamesToAdd.push(LABEL_ARCHIVE.getLabel(LabelCollectionType.PRCollection, pr?.draft ? PRType.OnGoing : PRType.ToReview)?.name!);
         break;
