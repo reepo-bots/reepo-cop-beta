@@ -121,14 +121,14 @@ export const LABEL_ARCHIVE: LabelArchive = new LabelArchive([
     new Label(
       `👯‍♂️ ${LabelCollectionType.IssueCollection}.${IssueType.Duplicate}`,
       'This issue describes a suggestion that will not be fixed.',
-      'FFFFFF',
+      'FCD4D0',
       IssueType.Duplicate.toLowerCase(),
       IssueType.Duplicate
     ),
     new Label(
       `🥇 ${LabelCollectionType.IssueCollection}.${IssueType.GoodFirstIssue}`,
       'This issue describes a suggestion that will not be fixed.',
-      'FFFFFF',
+      '7222D8',
       'good first issue',
       IssueType.GoodFirstIssue
     )
