@@ -1,6 +1,6 @@
-import GHPr from '../model/model_ghPR';
+import GHPr, { GHPrHandler } from '../model/model_ghPR';
 import GHRelease from '../model/model_ghRelease';
-import PullRequest from '../model/model_pr';
+import { LabelCollectionType } from '../model/model_labelCollection';
 
 export default class ReleaseService {
   private readonly CHANGELOG_TITLE: string = '## Changelog';
@@ -31,7 +31,7 @@ export default class ReleaseService {
     }: {
       pr_per_page?: number;
       pages?: number;
-      filter?: 'draft' | 'merged';
+      filter?: 'draft' | 'merged' | 'changelog-able';
       date_range?: { startDate?: Date; endDate?: Date };
     }) => Promise<GHPr[]>,
     release_body_updater: (currentRelease: GHRelease, newReleaseBody: string) => Promise<boolean>
@@ -42,12 +42,14 @@ export default class ReleaseService {
     }
 
     const lastRelease: GHRelease | undefined = await last_release_retriever();
-    const recentlyMergedPRs: PullRequest[] = (
+    const recentlyMergedPRs: GHPr[] = (
       await merged_pr_retriever({
-        filter: 'merged',
+        filter: 'changelog-able',
         date_range: { startDate: lastRelease ? new Date(lastRelease.published_at!) : undefined },
       })
-    ).map((ghPr: GHPr) => new PullRequest(ghPr));
+    );
+
+    // console.log(recentlyMergedPRs);
 
     const newReleaseBody: string = this.addChangelogToReleaseBody(
       currentRelease,
@@ -79,11 +81,11 @@ export default class ReleaseService {
    * @param pullRequests - List of Pull Requests to add to changelog.
    * @returns string representing a format list of changes.
    */
-  private draftChangelog(pullRequests: PullRequest[]): string {
+  private draftChangelog(pullRequests: GHPr[]): string {
     const changelogCollation: { [changelogHeader: string]: string } = {};
 
-    pullRequests.forEach((pullRequest: PullRequest) => {
-      const labelName: string | undefined = pullRequest.getAspectLabel()?.name;
+    pullRequests.forEach((pullRequest: GHPr) => {
+      const labelName: string | undefined = GHPrHandler.FindLabelByType(pullRequest, LabelCollectionType.AspectCollection)?.name;;
 
       // * Complex 1 Liner that Updates / Creates new Collated Changelog.
       changelogCollation[labelName ? this.headerGenerator(labelName) : this.OTHERS_HEADER] = changelogCollation[

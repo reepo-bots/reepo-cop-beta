@@ -3,7 +3,9 @@ import GHRelease from '../model/model_ghRelease';
 import GHIssue from '../model/model_ghIssue';
 import GHLabel from '../model/model_ghLabel';
 import GHUser from '../model/model_ghUser';
-import GHPr from '../model/model_ghPR';
+import GHPr, { GHPrHandler } from '../model/model_ghPR';
+import { LabelCollectionType } from '../model/model_labelCollection';
+import { ChangelogType } from '../model/model_label_type';
 
 const CODE_REST_REQUEST_SUCCESS: number = 200;
 const CODE_REST_POST_SUCCESS: number = 201;
@@ -86,7 +88,7 @@ export default class ContextService {
   }: {
     pr_per_page?: number;
     pages?: number;
-    filter?: 'draft' | 'merged';
+    filter?: 'draft' | 'merged' | 'changelog-able';
     date_range?: { startDate?: Date; endDate?: Date };
   }) => Promise<GHPr[]> {
     return async ({
@@ -97,7 +99,7 @@ export default class ContextService {
     }: {
       pr_per_page?: number;
       pages?: number;
-      filter?: 'draft' | 'merged';
+      filter?: 'draft' | 'merged' | 'changelog-able';
       date_range?: { startDate?: Date; endDate?: Date };
     }) => {
       try {
@@ -141,9 +143,19 @@ export default class ContextService {
 
         switch (filter) {
           case 'draft':
-            return data.filter((pr: GHPr) => pr.draft && isPRTimeConstraintMet(pr.updated_at));
+            return data.filter((pr: GHPr) => pr.state === 'open' && pr.draft && isPRTimeConstraintMet(pr.updated_at));
           case 'merged':
-            return data.filter((pr: GHPr) => pr.merged_at && isPRTimeConstraintMet(pr.merged_at));
+            return data.filter(
+              (pr: GHPr) => pr.state === 'closed' && !!pr.merged_at && isPRTimeConstraintMet(pr.merged_at)
+            );
+          case 'changelog-able':
+            return data.filter(
+              (pr: GHPr) =>
+                pr.state === 'closed' &&
+                !!pr.merged_at &&
+                isPRTimeConstraintMet(pr.merged_at) &&
+                !GHPrHandler.FindLabelByType(pr, LabelCollectionType.ChangelogCollection, ChangelogType.DoNotList)
+            );
           default:
             return data as GHPr[];
           // TODO: Add support for closed PRs
@@ -195,12 +207,14 @@ export default class ContextService {
   public getRepoLabelsRetriever(context: HookContext): () => Promise<GHLabel[]> {
     return async () => {
       try {
-        const { data, status }: { data: GHLabel[], status: number } = await context.octokit.issues.listLabelsForRepo({ ...this.getRepoOwnerData(context) });
-      
+        const { data, status }: { data: GHLabel[]; status: number } = await context.octokit.issues.listLabelsForRepo({
+          ...this.getRepoOwnerData(context),
+        });
+
         if (status !== CODE_REST_REQUEST_SUCCESS) {
           return [];
         }
-        
+
         return data;
       } catch (e: any) {
         return [];
