@@ -1,5 +1,5 @@
 export default interface GHUser {
-  [key: string]: any,
+  [key: string]: any; // TODO: Currently added for auto param assignment, remove if not necessary.
   login: string;
   id: number;
   node_id: string;
