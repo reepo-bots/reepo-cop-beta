@@ -7,7 +7,7 @@ export default class ReleaseService {
   private readonly OTHERS_HEADER: string = '### 🧱 Others\n';
   private readonly headerGenerator: (labelName: string) => string = (labelName: string) => {
     const [emoji, title, ..._]: [emoji?: string, title?: string, ..._: string[]] = labelName.split(/ .*\./);
-    return `### ${emoji} ${title}\n`;
+    return `### ${emoji} ${title}s\n`;
   };
 
   /**
