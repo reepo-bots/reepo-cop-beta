@@ -181,7 +181,8 @@ export default class PRService {
    * @returns string containing validation results.
    */
   private getCommitMessageCorrectionMessage(commitMsg: string): string {
-    const VALIDATION_TITLE = '## Commit Message Validation\n';
+    const VALIDATION_TITLE = '<h3 align="center">Commit Message Validation</h3>\n\n';
+    const QUOTED_COMMIT_MSG = `\`\`\`\n${commitMsg}\n\`\`\`\n`
     const splitMsg: string[] = commitMsg.split('\n');
 
     const validateTitleNoPeriod: (splitMsg: string[]) => string = (splitMsg: string[]) => {
@@ -230,7 +231,7 @@ export default class PRService {
       }
     };
 
-    return `${VALIDATION_TITLE}${validateTitleNoPeriod(splitMsg)}${validateCharCheck(
+    return `${VALIDATION_TITLE}${QUOTED_COMMIT_MSG}${validateTitleNoPeriod(splitMsg)}${validateCharCheck(
       splitMsg
     )}${validateSpaceBetweenTitleAndBody(splitMsg)}`;
   }
