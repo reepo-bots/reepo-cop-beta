@@ -46,7 +46,7 @@ export = (app: Probot) => {
 
   app.on('label', async (context: HookContext) => {
     await _botService.handleLabelValidation(context);
-  })
+  });
 
   app.on(['issues.opened', 'issues.edited'], async (context: HookContext) => {
     await _botService.handleAutomatedIssueLabelling(context);

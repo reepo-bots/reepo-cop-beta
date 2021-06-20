@@ -100,51 +100,56 @@ export default class ContextService {
       filter?: 'draft' | 'merged';
       date_range?: { startDate?: Date; endDate?: Date };
     }) => {
-      // Fetched Data De-Construction
-      const { data, status }: { data: any[] | GHPr[]; status: number } = await context.octokit.rest.pulls.list({
-        ...this.getRepoOwnerData(context),
-        state: 'all',
-        per_page: pr_per_page ? 50 : pr_per_page, // * DEFAULT: 50
-        page: pages ? 1 : pages, // * DEFAULT: 1
-      });
+      try {
+        // Fetched Data De-Construction
+        const { data, status }: { data: any[] | GHPr[]; status: number } = await context.octokit.rest.pulls.list({
+          ...this.getRepoOwnerData(context),
+          state: 'all',
+          per_page: pr_per_page ? 50 : pr_per_page, // * DEFAULT: 50
+          page: pages ? 1 : pages, // * DEFAULT: 1
+        });
 
-      if (status !== CODE_REST_REQUEST_SUCCESS) {
-        return [];
-      }
-
-      // * Sub-Function used to ensure that submitted Date-Time Strings
-      // * fall within the user specified range (if one is provided.)
-      const isPRTimeConstraintMet: (...comparisonTimeStrings: string[]) => boolean = (
-        ...comparisonTimeStrings: string[]
-      ) => {
-        // If no Date-Range is provided or no params
-        // are provided then time constraint is always met.
-        if (!date_range) {
-          return true;
+        // ! If fetch failed.
+        if (status !== CODE_REST_REQUEST_SUCCESS) {
+          return [];
         }
 
-        const rangeStart: number = (date_range.startDate ? date_range.startDate : new Date(1)).getTime();
-        const rangeEnd: number = (date_range.endDate ? date_range.endDate : new Date()).getTime();
-        const comparisonTimes: number[] = comparisonTimeStrings.map((comparisonTimeString: string) =>
-          new Date(comparisonTimeString).getTime()
-        );
-
-        return comparisonTimes.some((time: number | null) => {
-          if (!time) {
+        // * Sub-Function used to ensure that submitted Date-Time Strings
+        // * fall within the user specified range (if one is provided.)
+        const isPRTimeConstraintMet: (...comparisonTimeStrings: string[]) => boolean = (
+          ...comparisonTimeStrings: string[]
+        ) => {
+          // If no Date-Range is provided or no params
+          // are provided then time constraint is always met.
+          if (!date_range) {
             return true;
           }
-          return time >= rangeStart && time <= rangeEnd;
-        });
-      };
 
-      switch (filter) {
-        case 'draft':
-          return data.filter((pr: GHPr) => pr.draft && isPRTimeConstraintMet(pr.updated_at));
-        case 'merged':
-          return data.filter((pr: GHPr) => pr.merged_at && isPRTimeConstraintMet(pr.merged_at));
-        default:
-          return data as GHPr[];
-        // TODO: Add support for closed PRs
+          const rangeStart: number = (date_range.startDate ? date_range.startDate : new Date(1)).getTime();
+          const rangeEnd: number = (date_range.endDate ? date_range.endDate : new Date()).getTime();
+          const comparisonTimes: number[] = comparisonTimeStrings.map((comparisonTimeString: string) =>
+            new Date(comparisonTimeString).getTime()
+          );
+
+          return comparisonTimes.some((time: number | null) => {
+            if (!time) {
+              return true;
+            }
+            return time >= rangeStart && time <= rangeEnd;
+          });
+        };
+
+        switch (filter) {
+          case 'draft':
+            return data.filter((pr: GHPr) => pr.draft && isPRTimeConstraintMet(pr.updated_at));
+          case 'merged':
+            return data.filter((pr: GHPr) => pr.merged_at && isPRTimeConstraintMet(pr.merged_at));
+          default:
+            return data as GHPr[];
+          // TODO: Add support for closed PRs
+        }
+      } catch (e: any) {
+        return [];
       }
     };
   }
@@ -234,11 +239,15 @@ export default class ContextService {
    */
   public getAuthorsIssuesRetriever(context: HookContext): (author: string) => Promise<GHIssue[] | undefined> {
     return async (author: string) => {
-      const rest_result = await context.octokit.issues.listForRepo({
-        ...this.getRepoOwnerData(context),
-        creator: author,
-      });
-      return rest_result.status === CODE_REST_REQUEST_SUCCESS ? (rest_result.data as GHIssue[]) : undefined;
+      try {
+        const rest_result = await context.octokit.issues.listForRepo({
+          ...this.getRepoOwnerData(context),
+          creator: author,
+        });
+        return rest_result.status === CODE_REST_REQUEST_SUCCESS ? (rest_result.data as GHIssue[]) : undefined;
+      } catch (e: any) {
+        return undefined;
+      }
     };
   }
 

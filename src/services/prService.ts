@@ -30,7 +30,9 @@ export default class PRService {
       case PRAction.READY_FOR_REVIEW:
         labelNamesToAdd.push(LABEL_ARCHIVE.getLabel(LabelCollectionType.PRCollection, PRType.ToReview)?.name!);
       case PRAction.OPENED:
-        labelNamesToAdd.push(LABEL_ARCHIVE.getLabel(LabelCollectionType.PRCollection, pr?.draft ? PRType.OnGoing : PRType.ToReview)?.name!);
+        labelNamesToAdd.push(
+          LABEL_ARCHIVE.getLabel(LabelCollectionType.PRCollection, pr?.draft ? PRType.OnGoing : PRType.ToReview)?.name!
+        );
         break;
       case PRAction.CONVERTED_TO_DRAFT:
         labelNamesToAdd.push(LABEL_ARCHIVE.getLabel(LabelCollectionType.PRCollection, PRType.OnGoing)?.name!);
@@ -119,8 +121,11 @@ export default class PRService {
 
     const firstLineOfBody: string | undefined = ghPr.body.split('\n')[0];
     const labellingPriority: 'Linked-Issue' | 'Manual' | null = this.getAspectLabellingPriority(firstLineOfBody);
-    const existingAspectLabel: GHLabel | undefined = GHPrHandler.FindLabelByType(ghPr, LabelCollectionType.AspectCollection);
-    const aspectLabelNamesToReplace: string[] = existingAspectLabel ? [existingAspectLabel.name] : []
+    const existingAspectLabel: GHLabel | undefined = GHPrHandler.FindLabelByType(
+      ghPr,
+      LabelCollectionType.AspectCollection
+    );
+    const aspectLabelNamesToReplace: string[] = existingAspectLabel ? [existingAspectLabel.name] : [];
 
     if (!labellingPriority) {
       return true;
