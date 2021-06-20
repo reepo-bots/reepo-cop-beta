@@ -8,7 +8,7 @@ export default interface GHLabel {
   name: string,
   color: string,
   default: boolean,
-  description: string
+  description: string | null
 }
 
 export function isGHLabel(object: any): object is GHLabel {

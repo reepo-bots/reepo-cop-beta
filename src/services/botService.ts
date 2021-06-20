@@ -47,12 +47,18 @@ export default class BotService {
    */
   public async handlePR(context: HookContext, prAction: PRAction): Promise<boolean> {
     const prHandlingResults: boolean[] = [];
+    await this.handleLabelValidation(context);
 
     if (prAction === PRAction.EDITED || prAction === PRAction.READY_FOR_REVIEW) {
       prHandlingResults.push(
         await this._prService.validatePRCommitMessageProposal(
           this._contextService.extractPullRequestFromHook(context),
           this._contextService.getPRCommenter(context)
+        ),
+        await this._prService.assignAspectLabel(
+          this._contextService.extractPullRequestFromHook(context),
+          this._contextService.getPRLabelReplacer(context),
+          this._contextService.getIssueRetriever(context)
         )
       );
     }
@@ -74,14 +80,13 @@ export default class BotService {
    * @returns promise of true if label replacement was successful, false otherwise.
    */
   private async handlePRLabelReplacement(context: HookContext, prAction: PRAction): Promise<boolean> {
-    if (!(await this.handleLabelValidation(context))) {
-      console.log(this.generateLabelValidationFaliureMessage(`PRLabelReplacement: ${prAction}`));
-    }
+    await this.handleLabelValidation(context);
 
     return this._prService.replaceExistingPRLabels(
       this._contextService.getPRLabelReplacer(context),
       this._contextService.extractLabelsFromPRHook(context),
-      prAction
+      prAction,
+      this._contextService.extractPullRequestFromHook(context)
     );
   }
 
@@ -130,14 +135,12 @@ export default class BotService {
    * @returns a promise of true if automated labelling was a success, false otherwise.
    */
   public async handleAutomatedIssueLabelling(context: HookContext): Promise<boolean> {
-    if (!(await this.handleLabelValidation(context))) {
-      console.log(this.generateLabelValidationFaliureMessage(`AutoIssueLabelling`));
-    }
+    await this.handleLabelValidation(context);
 
     if (
       !(await this._issueService.performAutomatedLabelling(
         this._contextService.extractIssueFromHook(context),
-        this._contextService.getIssueLabelReplacer(context)
+        this._contextService.getAspectLabelReplacer(context)
       ))
     ) {
       console.log('Automated Issue Lablling has encountered an error.');
@@ -154,22 +157,11 @@ export default class BotService {
    * @returns A promise of true if label validation was successful and
    * false otherwise.
    */
-  private async handleLabelValidation(context: HookContext): Promise<boolean> {
+  public async handleLabelValidation(context: HookContext): Promise<boolean> {
     return await this._labelService.validateLabelsOnGihtub(
       this._contextService.getRepoLabelsRetriever(context),
       this._contextService.getLabelUpdater(context),
       this._contextService.getLabelCreator(context)
     );
-  }
-
-  /**
-   * Generates a string based on the location of faliure while
-   * using label validation.
-   * @param location - string representing faliure location.
-   * @returns a string that communicates a faliure in the label
-   * validation step.
-   */
-  private generateLabelValidationFaliureMessage(location: string) {
-    return `Label Validation failed in ${location}. Proceed with caution.`;
   }
 }

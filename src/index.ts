@@ -44,9 +44,14 @@ export = (app: Probot) => {
     await _botService.handleUserCongratulatoryMessage(context, 'Issue');
   });
 
+  app.on('label', async (context: HookContext) => {
+    await _botService.handleLabelValidation(context);
+  });
+
   app.on(['issues.opened', 'issues.edited'], async (context: HookContext) => {
     await _botService.handleAutomatedIssueLabelling(context);
   });
+
   // For more information on building apps:
   // https://probot.github.io/docs/
 

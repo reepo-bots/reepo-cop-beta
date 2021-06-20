@@ -11,9 +11,8 @@
   Paused = 'OnHold',
 }
 
-export enum IssueType {
+export enum AspectType {
   Bug = 'Bug',
-  WontFix = 'WontFix',
   Feature = 'Feature',
   Documentation = 'Doc',
   Enhancement = 'Enhancement',
@@ -27,5 +26,15 @@ export enum PriorityType {
   Low = 'Low'
 }
 
-type LabelType = PRType | IssueType | PriorityType;
+export enum ChangelogType {
+  DoNotList = 'DoNotList'
+}
+
+export enum IssueType {
+  WontFix = 'WontFix',
+  GoodFirstIssue = 'GoodFirstIssue',
+  Duplicate = 'Duplicate'
+}
+
+type LabelType = PRType | AspectType | PriorityType | ChangelogType | IssueType;
 export default LabelType;

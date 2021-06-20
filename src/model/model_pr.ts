@@ -43,9 +43,8 @@ export default class PullRequest {
    * Extracts an 'Issue' Label from set of Labels.
    * @returns Label that is an 'Issue' Label.
    */
-  public getIssueLabel(): Label | undefined {
-    // console.log(this._labels);
-    return this._labels.find((label: Label) => label.name.includes(LabelCollectionType.IssueCollection));
+  public getAspectLabel(): Label | undefined {
+    return this._labels.find((label: Label) => label.name.includes(LabelCollectionType.AspectCollection));
   }
 
   public get draft(): boolean | undefined {

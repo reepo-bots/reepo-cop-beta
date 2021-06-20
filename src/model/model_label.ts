@@ -8,15 +8,15 @@ export default class Label {
   private _color: string;
   private _hash: string;
   private _aliases: string[];
-  private _action: LabelType;
+  private _labelType: LabelType;
 
-  constructor(name: string, desc: string, color: string, substr: string | string[], action: LabelType) {
+  constructor(name: string, desc: string, color: string, substr: string | string[], labelType: LabelType) {
     this._name = name;
     this._desc = desc;
     this._color = color;
     this._hash = Label.GenerateHash(name, desc, color);
     this._aliases = (typeof substr === 'string' || substr instanceof String ? [substr] : substr) as string[];
-    this._action = action;
+    this._labelType = labelType;
   }
 
   private static GenerateHash(name: string, desc: string, color: string) {
@@ -52,7 +52,7 @@ export default class Label {
   }
 
   public get type(): LabelType {
-    return this._action;
+    return this._labelType;
   }
 
   public equal(label: Label): boolean;

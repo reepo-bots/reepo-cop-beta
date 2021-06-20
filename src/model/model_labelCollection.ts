@@ -2,9 +2,11 @@ import Label from './model_label';
 import LabelType from './model_label_type';
 
 export enum LabelCollectionType {
-  IssueCollection = 'issue',
+  AspectCollection = 'aspect',
   PRCollection = 'pr',
-  PriorityCollection = 'priority'
+  PriorityCollection = 'priority',
+  ChangelogCollection = 'changelog',
+  IssueCollection = 'issue'
 }
 
 export default class LabelCollection {

@@ -5,8 +5,8 @@ import GHLabel from '../model/model_ghLabel';
 import GHUser from '../model/model_ghUser';
 import GHPr from '../model/model_ghPR';
 
-const CODE_REST_REQUEST_SUCCESS = 200;
-const CODE_REST_POST_SUCCESS = 201;
+const CODE_REST_REQUEST_SUCCESS: number = 200;
+const CODE_REST_POST_SUCCESS: number = 201;
 
 /**
  * Meant to help abbreviate context object type.
@@ -100,51 +100,56 @@ export default class ContextService {
       filter?: 'draft' | 'merged';
       date_range?: { startDate?: Date; endDate?: Date };
     }) => {
-      // Fetched Data De-Construction
-      const { data, status }: { data: any[] | GHPr[]; status: number } = await context.octokit.rest.pulls.list({
-        ...this.getRepoOwnerData(context),
-        state: 'all',
-        per_page: pr_per_page ? 50 : pr_per_page, // * DEFAULT: 50
-        page: pages ? 1 : pages, // * DEFAULT: 1
-      });
+      try {
+        // Fetched Data De-Construction
+        const { data, status }: { data: any[] | GHPr[]; status: number } = await context.octokit.rest.pulls.list({
+          ...this.getRepoOwnerData(context),
+          state: 'all',
+          per_page: pr_per_page ? 50 : pr_per_page, // * DEFAULT: 50
+          page: pages ? 1 : pages, // * DEFAULT: 1
+        });
 
-      if (status !== CODE_REST_REQUEST_SUCCESS) {
-        return [];
-      }
-
-      // * Sub-Function used to ensure that submitted Date-Time Strings
-      // * fall within the user specified range (if one is provided.)
-      const isPRTimeConstraintMet: (...comparisonTimeStrings: string[]) => boolean = (
-        ...comparisonTimeStrings: string[]
-      ) => {
-        // If no Date-Range is provided or no params
-        // are provided then time constraint is always met.
-        if (!date_range) {
-          return true;
+        // ! If fetch failed.
+        if (status !== CODE_REST_REQUEST_SUCCESS) {
+          return [];
         }
 
-        const rangeStart: number = (date_range.startDate ? date_range.startDate : new Date(1)).getTime();
-        const rangeEnd: number = (date_range.endDate ? date_range.endDate : new Date()).getTime();
-        const comparisonTimes: number[] = comparisonTimeStrings.map((comparisonTimeString: string) =>
-          new Date(comparisonTimeString).getTime()
-        );
-
-        return comparisonTimes.some((time: number | null) => {
-          if (!time) {
+        // * Sub-Function used to ensure that submitted Date-Time Strings
+        // * fall within the user specified range (if one is provided.)
+        const isPRTimeConstraintMet: (...comparisonTimeStrings: string[]) => boolean = (
+          ...comparisonTimeStrings: string[]
+        ) => {
+          // If no Date-Range is provided or no params
+          // are provided then time constraint is always met.
+          if (!date_range) {
             return true;
           }
-          return time >= rangeStart && time <= rangeEnd;
-        });
-      };
 
-      switch (filter) {
-        case 'draft':
-          return data.filter((pr: GHPr) => pr.draft && isPRTimeConstraintMet(pr.updated_at));
-        case 'merged':
-          return data.filter((pr: GHPr) => pr.merged_at && isPRTimeConstraintMet(pr.merged_at));
-        default:
-          return data as GHPr[];
-        // TODO: Add support for closed PRs
+          const rangeStart: number = (date_range.startDate ? date_range.startDate : new Date(1)).getTime();
+          const rangeEnd: number = (date_range.endDate ? date_range.endDate : new Date()).getTime();
+          const comparisonTimes: number[] = comparisonTimeStrings.map((comparisonTimeString: string) =>
+            new Date(comparisonTimeString).getTime()
+          );
+
+          return comparisonTimes.some((time: number | null) => {
+            if (!time) {
+              return true;
+            }
+            return time >= rangeStart && time <= rangeEnd;
+          });
+        };
+
+        switch (filter) {
+          case 'draft':
+            return data.filter((pr: GHPr) => pr.draft && isPRTimeConstraintMet(pr.updated_at));
+          case 'merged':
+            return data.filter((pr: GHPr) => pr.merged_at && isPRTimeConstraintMet(pr.merged_at));
+          default:
+            return data as GHPr[];
+          // TODO: Add support for closed PRs
+        }
+      } catch (e: any) {
+        return [];
       }
     };
   }
@@ -188,8 +193,19 @@ export default class ContextService {
    * @returns an async function that fetches Labels from Github.
    */
   public getRepoLabelsRetriever(context: HookContext): () => Promise<GHLabel[]> {
-    return async () =>
-      (await context.octokit.issues.listLabelsForRepo({ ...this.getRepoOwnerData(context) })).data as GHLabel[];
+    return async () => {
+      try {
+        const { data, status }: { data: GHLabel[], status: number } = await context.octokit.issues.listLabelsForRepo({ ...this.getRepoOwnerData(context) });
+      
+        if (status !== CODE_REST_REQUEST_SUCCESS) {
+          return [];
+        }
+        
+        return data;
+      } catch (e: any) {
+        return [];
+      }
+    };
   }
 
   /**
@@ -200,15 +216,19 @@ export default class ContextService {
    * promises true if label creation is successful.
    */
   public getLabelCreator(context: HookContext): (name: string, desc: string, color: string) => Promise<boolean> {
-    return async (name: string, desc: string, color: string) =>
-      (
-        await context.octokit.rest.issues.createLabel({
+    return async (name: string, desc: string, color: string) => {
+      try {
+        const { status }: { data: any; status: number } = await context.octokit.rest.issues.createLabel({
           ...this.getRepoOwnerData(context),
           name: name,
           description: desc,
           color: color,
-        })
-      ).status === CODE_REST_POST_SUCCESS;
+        });
+        return status === CODE_REST_POST_SUCCESS;
+      } catch (e: any) {
+        return false;
+      }
+    };
   }
 
   /**
@@ -219,11 +239,15 @@ export default class ContextService {
    */
   public getAuthorsIssuesRetriever(context: HookContext): (author: string) => Promise<GHIssue[] | undefined> {
     return async (author: string) => {
-      const rest_result = await context.octokit.issues.listForRepo({
-        ...this.getRepoOwnerData(context),
-        creator: author,
-      });
-      return rest_result.status === CODE_REST_REQUEST_SUCCESS ? (rest_result.data as GHIssue[]) : undefined;
+      try {
+        const rest_result = await context.octokit.issues.listForRepo({
+          ...this.getRepoOwnerData(context),
+          creator: author,
+        });
+        return rest_result.status === CODE_REST_REQUEST_SUCCESS ? (rest_result.data as GHIssue[]) : undefined;
+      } catch (e: any) {
+        return undefined;
+      }
     };
   }
 
@@ -237,16 +261,20 @@ export default class ContextService {
   public getLabelUpdater(
     context: HookContext
   ): (oldName: string, newName: string, desc: string, color: string) => Promise<boolean> {
-    return async (oldName: string, newName: string, desc: string, color: string) =>
-      (
-        await context.octokit.rest.issues.updateLabel({
+    return async (oldName: string, newName: string, desc: string, color: string) => {
+      try {
+        const { status }: { status: number } = await context.octokit.rest.issues.updateLabel({
           ...this.getRepoOwnerData(context),
           name: oldName,
           new_name: newName,
           description: desc,
           color: color,
-        })
-      ).status === CODE_REST_REQUEST_SUCCESS;
+        });
+        return status === CODE_REST_REQUEST_SUCCESS;
+      } catch (e: any) {
+        return false;
+      }
+    };
   }
 
   /**
@@ -257,7 +285,7 @@ export default class ContextService {
    * @param issueNumber - Number of Issue that is to have its labels replaced.
    * @returns an async function to replace labels on an issue.
    */
-  public getIssueLabelReplacer(
+  public getAspectLabelReplacer(
     context: HookContext,
     issueNumber?: number
   ): (removalLabelName: string[], replacementLabelNames: string[]) => Promise<boolean> {
@@ -329,6 +357,21 @@ export default class ContextService {
     };
   }
 
+  public getIssueRetriever(context: HookContext): (issueNumber: number) => Promise<GHIssue | undefined> {
+    return async (issueNumber: number) => {
+      const { data, status }: { data: any; status: number } = await context.octokit.rest.issues.get({
+        ...this.getRepoOwnerData(context),
+        issue_number: issueNumber,
+      });
+
+      if (status !== CODE_REST_REQUEST_SUCCESS) {
+        return undefined;
+      }
+
+      return data as GHIssue;
+    };
+  }
+
   /**
    * Returns a function that with relevant inputs,
    * removes specified labels from a PR and replaces them
@@ -342,7 +385,7 @@ export default class ContextService {
     pullRequestNumber?: number
   ): (removalLabelName: string[], replacementLabelNames: string[]) => Promise<boolean> {
     // According to Github, for this case Issues and PRs are treated the same.
-    return this.getIssueLabelReplacer(
+    return this.getAspectLabelReplacer(
       context,
       pullRequestNumber ? pullRequestNumber : context.payload.pull_request?.number!
     );
