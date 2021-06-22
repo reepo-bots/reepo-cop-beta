@@ -5,6 +5,7 @@ export default interface GHRelease {
   id: number,
   author: GHUser,
   tag_name: string,
+  release_id: number,
   target_commitish: string, // Branch that is used for release.
   name: string,
   draft: boolean,

@@ -4,21 +4,25 @@ import GHIssue from '../model/model_ghIssue';
 import GHLabel from '../model/model_ghLabel';
 import GHUser from '../model/model_ghUser';
 import GHPr, { GHPrHandler } from '../model/model_ghPR';
+import GithubService, { RepoOwnerData } from './githubService';
 import { LabelCollectionType } from '../model/model_labelCollection';
 import { ChangelogType } from '../model/model_label_type';
 
 const CODE_REST_REQUEST_SUCCESS: number = 200;
 const CODE_REST_POST_SUCCESS: number = 201;
 
+// PR Retrieval Function Params (Stored here for abbreviation)
+export type PRRetrievalParams = {
+  pr_per_page?: number;
+  pages?: number;
+  filter?: 'draft' | 'merged' | 'changelog-able';
+  date_range?: { startDate?: Date; endDate?: Date };
+};
+
 /**
  * Meant to help abbreviate context object type.
  */
 export interface HookContext extends Context<WebhookPayloadWithRepository> {}
-
-interface RepoOwnerData {
-  owner: string;
-  repo: string;
-}
 
 /**
  * A Service that helps manipulate HookContext objects on Runtime
@@ -26,6 +30,8 @@ interface RepoOwnerData {
  * HookContext.
  */
 export default class ContextService {
+  private readonly _githubService: GithubService = new GithubService();
+
   /**
    * Returns an object that contains owner and repo information.
    * @param context - Object returned from Probot's EventHook.
@@ -42,33 +48,22 @@ export default class ContextService {
    * @returns an async function that adds a comment to a PR and resolves
    * to true if commenting was successful and false otherwise.
    */
-  public getPRCommenter(
-    context: HookContext,
-    pr: GHPr = this.extractPullRequestFromHook(context)
-  ): (comment: string) => Promise<boolean> {
+  public getPRCommenter(context: HookContext): (pr: GHPr, comment: string) => Promise<boolean> {
     // This works because Github treats both PRs and Issues as 'Github Issues'
     // in this case.
-    return this.getGHIssueCommentCreator(context, pr);
+    return async (pr: GHPr, comment: string) =>
+      await this._githubService.createIssueComment(context.octokit, this.getRepoOwnerData(context), pr, comment);
   }
 
   /**
-   * Returns a function that can update a Release's text body
-   * given an input string.
+   * Returns a function that can update release.
    * @param context - Object returned from Probot's EventHook.
-   * @returns an async function that takes a string and uses that
-   * to replace an input Release's body (taken from context).
+   * @returns an async function that takes an updated release and
+   * updates the original on Github.
    */
-  public getReleaseBodyUpdater(
-    context: HookContext
-  ): (currentRelease: GHRelease, newReleaseBody: string) => Promise<boolean> {
-    return async (currentRelease: GHRelease, newReleaseBody: string) => {
-      const { status }: { status: number } = await context.octokit.rest.repos.updateRelease({
-        ...this.getRepoOwnerData(context),
-        release_id: currentRelease.id,
-        body: newReleaseBody,
-      });
-
-      return status === CODE_REST_POST_SUCCESS;
+  public getReleaseUpdater(context: HookContext): (updatedRelease: GHRelease) => Promise<boolean> {
+    return async (updatedRelease: GHRelease) => {
+      return await this._githubService.updateRelease(context.octokit, this.getRepoOwnerData(context), updatedRelease);
     };
   }
 
@@ -78,90 +73,50 @@ export default class ContextService {
    * @param context - Object returned from Probot's EventHook.
    * @returns an array of GHPr Objects.
    */
-  public getPRRetriever(
-    context: HookContext
-  ): ({
-    pr_per_page,
-    pages,
-    filter,
-    date_range,
-  }: {
-    pr_per_page?: number;
-    pages?: number;
-    filter?: 'draft' | 'merged' | 'changelog-able';
-    date_range?: { startDate?: Date; endDate?: Date };
-  }) => Promise<GHPr[]> {
-    return async ({
-      pr_per_page,
-      pages,
-      filter,
-      date_range,
-    }: {
-      pr_per_page?: number;
-      pages?: number;
-      filter?: 'draft' | 'merged' | 'changelog-able';
-      date_range?: { startDate?: Date; endDate?: Date };
-    }) => {
-      try {
-        // Fetched Data De-Construction
-        const { data, status }: { data: any[] | GHPr[]; status: number } = await context.octokit.rest.pulls.list({
-          ...this.getRepoOwnerData(context),
-          state: 'all',
-          per_page: pr_per_page ? 50 : pr_per_page, // * DEFAULT: 50
-          page: pages ? 1 : pages, // * DEFAULT: 1
-        });
+  public getPRRetriever(context: HookContext): (prParams: PRRetrievalParams) => Promise<GHPr[]> {
+    return async (prParams: PRRetrievalParams) => {
+      // Fetched Data De-Construction
+      const fetchedPRs: GHPr[] = await this._githubService.fetchPullRequests(
+        context.octokit,
+        this.getRepoOwnerData(context),
+        { pr_per_page: prParams.pr_per_page, pages: prParams.pages }
+      );
 
-        // ! If fetch failed.
-        if (status !== CODE_REST_REQUEST_SUCCESS) {
-          return [];
-        }
-
-        // * Sub-Function used to ensure that submitted Date-Time Strings
-        // * fall within the user specified range (if one is provided.)
-        const isPRTimeConstraintMet: (...comparisonTimeStrings: string[]) => boolean = (
-          ...comparisonTimeStrings: string[]
-        ) => {
-          // If no Date-Range is provided or no params
-          // are provided then time constraint is always met.
-          if (!date_range) {
-            return true;
-          }
-
-          const rangeStart: number = (date_range.startDate ? date_range.startDate : new Date(1)).getTime();
-          const rangeEnd: number = (date_range.endDate ? date_range.endDate : new Date()).getTime();
-          const comparisonTimes: number[] = comparisonTimeStrings.map((comparisonTimeString: string) =>
-            new Date(comparisonTimeString).getTime()
+      switch (prParams.filter) {
+        case 'draft':
+          return fetchedPRs.filter(
+            (pr: GHPr) =>
+              pr.state === 'open' &&
+              pr.draft &&
+              GHPrHandler.IsPrWithinDateTimeConstraints(pr, 'updated_at', {
+                startDateTime: prParams.date_range?.startDate,
+                endDateTime: prParams.date_range?.endDate,
+              })
           );
-
-          return comparisonTimes.some((time: number | null) => {
-            if (!time) {
-              return true;
-            }
-            return time >= rangeStart && time <= rangeEnd;
-          });
-        };
-
-        switch (filter) {
-          case 'draft':
-            return data.filter((pr: GHPr) => pr.state === 'open' && pr.draft && isPRTimeConstraintMet(pr.updated_at));
-          case 'merged':
-            return data.filter(
-              (pr: GHPr) => pr.state === 'closed' && !!pr.merged_at && isPRTimeConstraintMet(pr.merged_at)
-            );
-          case 'changelog-able':
-            return data.filter(
-              (pr: GHPr) =>
-                pr.state === 'closed' &&
-                !!pr.merged_at &&
-                isPRTimeConstraintMet(pr.merged_at) &&
-                !GHPrHandler.FindLabelByType(pr, LabelCollectionType.ChangelogCollection, ChangelogType.DoNotList)
-            );
-          default:
-            return data as GHPr[];
-          // TODO: Add support for closed PRs
-        }
-      } catch (e: any) {
-        return [];
+        case 'merged':
+          return fetchedPRs.filter(
+            (pr: GHPr) =>
+              pr.state === 'closed' &&
+              !!pr.merged_at &&
+              GHPrHandler.IsPrWithinDateTimeConstraints(pr, 'merged_at', {
+                startDateTime: prParams.date_range?.startDate,
+                endDateTime: prParams.date_range?.endDate,
+              })
+          );
+        case 'changelog-able':
+          return fetchedPRs.filter(
+            (pr: GHPr) =>
+              pr.state === 'closed' &&
+              !!pr.merged_at &&
+              GHPrHandler.IsPrWithinDateTimeConstraints(pr, 'merged_at', {
+                startDateTime: prParams.date_range?.startDate,
+                endDateTime: prParams.date_range?.endDate,
+              }) &&
+              !GHPrHandler.FindLabelByType(pr, LabelCollectionType.ChangelogCollection, ChangelogType.DoNotList)
+          );
+        default:
+          return fetchedPRs;
+        // TODO: Add support for closed PRs
       }
     };
   }
@@ -173,11 +128,9 @@ export default class ContextService {
    * @returns an async function that adds a comment on an issue and resolves
    * to true if commenting was successful and false otherwise.
    */
-  public getIssueCommentCreator(
-    context: HookContext,
-    issue: GHIssue = this.extractIssueFromHook(context)
-  ): (comment: string) => Promise<boolean> {
-    return this.getGHIssueCommentCreator(context, issue);
+  public getIssueCommentCreator(context: HookContext): (issue: GHIssue, comment: string) => Promise<boolean> {
+    return async (issue: GHIssue, comment: string) =>
+      await this._githubService.createIssueComment(context.octokit, this.getRepoOwnerData(context), issue, comment);
   }
 
   /**
@@ -187,15 +140,9 @@ export default class ContextService {
    * @returns an async function that adds a comment on a 'Github Issue' and
    * resolves to true if commenting was successful and false otherwise.
    */
-  private getGHIssueCommentCreator(context: HookContext, issue: GHIssue | GHPr): (comment: string) => Promise<boolean> {
-    return async (comment: string) =>
-      (
-        await context.octokit.issues.createComment({
-          ...this.getRepoOwnerData(context),
-          issue_number: issue.number,
-          body: comment,
-        })
-      ).status === CODE_REST_POST_SUCCESS;
+  private getGHIssueCommentCreator(context: HookContext): (issue: GHIssue | GHPr, comment: string) => Promise<boolean> {
+    return async (issue: GHIssue | GHPr, comment: string) =>
+      await this._githubService.createIssueComment(context.octokit, this.getRepoOwnerData(context), issue, comment);
   }
 
   /**
@@ -231,17 +178,11 @@ export default class ContextService {
    */
   public getLabelCreator(context: HookContext): (name: string, desc: string, color: string) => Promise<boolean> {
     return async (name: string, desc: string, color: string) => {
-      try {
-        const { status }: { data: any; status: number } = await context.octokit.rest.issues.createLabel({
-          ...this.getRepoOwnerData(context),
-          name: name,
-          description: desc,
-          color: color,
-        });
-        return status === CODE_REST_POST_SUCCESS;
-      } catch (e: any) {
-        return false;
-      }
+      return await this._githubService.createLabel(context.octokit, this.getRepoOwnerData(context), {
+        name: name,
+        description: desc,
+        color: color,
+      } as GHLabel);
     };
   }
 
@@ -430,6 +371,7 @@ export default class ContextService {
    * context.
    */
   public extractPullRequestFromHook(context: HookContext): GHPr {
+    console.log(context.payload?.pull_request);
     return context.payload?.pull_request as GHPr;
   }
 

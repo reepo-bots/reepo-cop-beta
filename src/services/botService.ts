@@ -35,7 +35,7 @@ export default class BotService {
       existingRelease,
       this._contextService.getLastReleaseRetriever(context, 'published'),
       this._contextService.getPRRetriever(context),
-      this._contextService.getReleaseBodyUpdater(context)
+      this._contextService.getReleaseUpdater(context)
     );
   }
 
@@ -103,21 +103,12 @@ export default class BotService {
   ): Promise<boolean> {
     switch (congratulationType) {
       case 'Issue':
-        const userIssueCount: number = await this._issueService.getNumberOfIssuesCreatedByUser(
+        return await this._issueService.handleIssueCongratulation(
           this._contextService.extractUserFromIssueHook(context),
-          this._contextService.getAuthorsIssuesRetriever(context)
+          this._contextService.extractIssueFromHook(context),
+          this._contextService.getAuthorsIssuesRetriever(context),
+          this._contextService.getIssueCommentCreator(context)
         );
-        if (this._issueService.isUsersMilestone(userIssueCount)) {
-          const congPostResult: boolean = await this._contextService.getIssueCommentCreator(context)(
-            this._issueService.getUserMilestoneIssueCongratulation(userIssueCount)
-          );
-          if (!congPostResult) {
-            console.log('Unable to Post Congratulatory comment on Issue.');
-          }
-          return congPostResult;
-        }
-        break;
-
       case 'PR':
         console.log('PR Congratulation Function - Work In Progress');
         return false;

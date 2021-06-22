@@ -1,6 +1,7 @@
 import GHPr, { GHPrHandler } from '../model/model_ghPR';
 import GHRelease from '../model/model_ghRelease';
 import { LabelCollectionType } from '../model/model_labelCollection';
+import { PRRetrievalParams } from './contextService';
 
 export default class ReleaseService {
   private readonly CHANGELOG_TITLE: string = '## Changelog';
@@ -23,18 +24,8 @@ export default class ReleaseService {
   public async updateReleaseChangelog(
     currentRelease: GHRelease,
     last_release_retriever: () => Promise<GHRelease | undefined>,
-    merged_pr_retriever: ({
-      pr_per_page,
-      pages,
-      filter,
-      date_range,
-    }: {
-      pr_per_page?: number;
-      pages?: number;
-      filter?: 'draft' | 'merged' | 'changelog-able';
-      date_range?: { startDate?: Date; endDate?: Date };
-    }) => Promise<GHPr[]>,
-    release_body_updater: (currentRelease: GHRelease, newReleaseBody: string) => Promise<boolean>
+    merged_pr_retriever: (prRetrievalParams: PRRetrievalParams) => Promise<GHPr[]>,
+    release_updater: (updatedRelease: GHRelease) => Promise<boolean>
   ): Promise<boolean> {
     //! Do not make changes on a release that is not a draft.
     if (!currentRelease.draft) {
@@ -55,7 +46,7 @@ export default class ReleaseService {
       currentRelease,
       this.draftChangelog(recentlyMergedPRs)
     );
-    return await release_body_updater(currentRelease, newReleaseBody);
+    return await release_updater({ ...currentRelease, body: newReleaseBody });
   }
 
   /**

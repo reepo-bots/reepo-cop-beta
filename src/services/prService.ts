@@ -100,7 +100,7 @@ export default class PRService {
       return '';
     }
 
-    return aspectLabel.name;
+    return aspectLabel.name!;
   }
 
   /**
@@ -115,7 +115,7 @@ export default class PRService {
     prLabelReplacer: (removalLabelName: string[], replacementLabelNames: string[]) => Promise<boolean>,
     issueRetriever: (issueNumber: number) => Promise<GHIssue | undefined>
   ): Promise<boolean> {
-    if (ghPr?.draft) {
+    if (ghPr?.draft || !ghPr.body) {
       return true;
     }
 
@@ -125,7 +125,7 @@ export default class PRService {
       ghPr,
       LabelCollectionType.AspectCollection
     );
-    const aspectLabelNamesToReplace: string[] = existingAspectLabel ? [existingAspectLabel.name] : [];
+    const aspectLabelNamesToReplace: string[] = existingAspectLabel ? [existingAspectLabel.name!] : [];
 
     if (!labellingPriority) {
       return true;
@@ -153,10 +153,10 @@ export default class PRService {
    */
   public async validatePRCommitMessageProposal(
     ghPr: GHPr,
-    prCommenter: (comment: string) => Promise<boolean>
+    prCommenter: (pr: GHPr, comment: string) => Promise<boolean>
   ): Promise<boolean> {
     // Do not check if PR is still in draft.
-    if (ghPr?.draft) {
+    if (ghPr?.draft || !ghPr.body) {
       return true;
     }
 
@@ -171,7 +171,7 @@ export default class PRService {
 
     const extractedMessage: string = extractedMessageArray[1].trim();
     const commitMsgCorrectionMsg: string = this.getCommitMessageCorrectionMessage(extractedMessage);
-    return await prCommenter(commitMsgCorrectionMsg);
+    return await prCommenter(ghPr, commitMsgCorrectionMsg);
   }
 
   /**
