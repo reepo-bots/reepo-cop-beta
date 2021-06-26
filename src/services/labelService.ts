@@ -25,7 +25,7 @@ export default class LabelService {
         let isMatched = false;
 
         for (const ghLabelIndex in ghLabels) {
-          if (ghLabels[ghLabelIndex].name.toLowerCase().includes(substr)) {
+          if (ghLabels[ghLabelIndex].name!.toLowerCase().includes(substr)) {
             isMatched = true;
 
             if (!label.equal(ghLabels[ghLabelIndex])) {
@@ -66,7 +66,7 @@ export default class LabelService {
 
     outdatedLabels.forEach(async (updatedLabel: Label, outdatedLabel: GHLabel) => {
       const labelUpdateResult: boolean = await labelUpdater(
-        outdatedLabel.name,
+        outdatedLabel.name!,
         updatedLabel.name,
         updatedLabel.desc,
         updatedLabel.color
@@ -158,8 +158,8 @@ export default class LabelService {
   public static extractLabelNames(labelCollectionType: LabelCollectionType, ghLabels: GHLabel[]) {
     const labelNames: string[] = [];
     for (const label of ghLabels) {
-      if (label.name.includes(`${labelCollectionType}.`)) {
-        labelNames.push(label.name);
+      if (label.name!.includes(`${labelCollectionType}.`)) {
+        labelNames.push(label.name!);
       }
     }
     return labelNames;

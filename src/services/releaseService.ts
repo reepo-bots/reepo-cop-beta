@@ -40,8 +40,6 @@ export default class ReleaseService {
       })
     );
 
-    // console.log(recentlyMergedPRs);
-
     const newReleaseBody: string = this.addChangelogToReleaseBody(
       currentRelease,
       this.draftChangelog(recentlyMergedPRs)

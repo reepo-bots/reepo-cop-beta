@@ -5,6 +5,7 @@ import IssueService from './issueService';
 import ReleaseService from './releaseService';
 import { PRAction } from '../model/model_pr';
 import GHRelease from '../model/model_ghRelease';
+import GHPr from '../model/model_ghPR';
 
 export default class BotService {
   private _labelService: LabelService;
@@ -50,13 +51,19 @@ export default class BotService {
     await this.handleLabelValidation(context);
 
     if (prAction === PRAction.EDITED || prAction === PRAction.READY_FOR_REVIEW) {
+      const pr: GHPr | undefined = await this._contextService.extractPullRequestFromHook(context);
+      if (!pr) {
+        console.error('Unable to handle PR: No PR in context');
+        return false;
+      }
+
       prHandlingResults.push(
         await this._prService.validatePRCommitMessageProposal(
-          this._contextService.extractPullRequestFromHook(context),
+          pr,
           this._contextService.getPRCommenter(context)
         ),
         await this._prService.assignAspectLabel(
-          this._contextService.extractPullRequestFromHook(context),
+          pr,
           this._contextService.getPRLabelReplacer(context),
           this._contextService.getIssueRetriever(context)
         )
@@ -82,11 +89,17 @@ export default class BotService {
   private async handlePRLabelReplacement(context: HookContext, prAction: PRAction): Promise<boolean> {
     await this.handleLabelValidation(context);
 
+    const pr: GHPr | undefined = await this._contextService.extractPullRequestFromHook(context);
+    if (!pr) {
+      console.error('Unable to handle PR Label Replacement: No PR in context');
+      return false;
+    }
+
     return this._prService.replaceExistingPRLabels(
       this._contextService.getPRLabelReplacer(context),
       this._contextService.extractLabelsFromPRHook(context),
       prAction,
-      this._contextService.extractPullRequestFromHook(context)
+      pr
     );
   }
 

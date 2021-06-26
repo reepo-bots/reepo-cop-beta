@@ -18,3 +18,7 @@ export default interface User {
   type?: string;
   site_admin?: boolean;
 }
+
+export class GHUserHandler {
+  public static readonly USER_TYPE_BOT: string = 'Bot';
+}

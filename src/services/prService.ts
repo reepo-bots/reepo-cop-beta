@@ -7,8 +7,13 @@ import { PRType } from '../model/model_label_type';
 import GHPr, { GHPrHandler } from '../model/model_ghPR';
 import Label from '../model/model_label';
 import GHIssue, { GHIssueHandler } from '../model/model_ghIssue';
+import GHPRComment from '../model/model_ghPrComment';
+import { GHUserHandler } from '../model/model_ghUser';
+import * as packageJson from '../../package.json';
 
 export default class PRService {
+  private readonly COMMIT_MESSAGE_VALIDATION_TITLE = '<h3 align="center">Commit Message Validation</h3>\n\n';
+
   /**
    * Replaces existing PR Labels with new labels based on the PR Action.
    * @param labelReplacer - A function that removes a set of labels and adds another to a PR.
@@ -170,6 +175,36 @@ export default class PRService {
     }
 
     const extractedMessage: string = extractedMessageArray[1].trim();
+
+    const commitMessageCheckRegex: RegExp = /.*```(.*)```.*/gs;
+    const lastCommitCheckComment: GHPRComment | undefined = ghPr.comments
+      ?.filter((comment: GHPRComment) => {
+        return (
+          comment.user?.type === GHUserHandler.USER_TYPE_BOT &&
+          comment.user?.login?.includes(packageJson.name) &&
+          comment?.body?.includes(this.COMMIT_MESSAGE_VALIDATION_TITLE)
+        );
+      })
+      .sort((a: GHPRComment, b: GHPRComment) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
+      .pop();
+    const lastCommitCheckBody: string | undefined = lastCommitCheckComment?.body
+      ? lastCommitCheckComment?.body
+      : undefined;
+
+    if (lastCommitCheckBody) {
+      const extractedPreviousMessageArray: RegExpExecArray | null = commitMessageCheckRegex.exec(lastCommitCheckBody!);
+
+      // Do not proceed with check if previously crafted
+      // verification does not exist.
+      if (extractedPreviousMessageArray) {
+        const extractedPreviousMessage: string = extractedPreviousMessageArray![1].trim();
+
+        if (extractedMessage === extractedPreviousMessage) {
+          return true;
+        }
+      }
+    }
+
     const commitMsgCorrectionMsg: string = this.getCommitMessageCorrectionMessage(extractedMessage);
     return await prCommenter(ghPr, commitMsgCorrectionMsg);
   }
@@ -182,7 +217,7 @@ export default class PRService {
    */
   private getCommitMessageCorrectionMessage(commitMsg: string): string {
     const VALIDATION_TITLE = '<h3 align="center">Commit Message Validation</h3>\n\n';
-    const QUOTED_COMMIT_MSG = `\`\`\`\n${commitMsg}\n\`\`\`\n`
+    const QUOTED_COMMIT_MSG = `\`\`\`\n${commitMsg}\n\`\`\`\n`;
     const splitMsg: string[] = commitMsg.split('\n');
 
     const validateTitleNoPeriod: (splitMsg: string[]) => string = (splitMsg: string[]) => {

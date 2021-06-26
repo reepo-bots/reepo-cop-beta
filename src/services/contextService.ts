@@ -9,7 +9,6 @@ import { LabelCollectionType } from '../model/model_labelCollection';
 import { ChangelogType } from '../model/model_label_type';
 
 const CODE_REST_REQUEST_SUCCESS: number = 200;
-const CODE_REST_POST_SUCCESS: number = 201;
 
 // PR Retrieval Function Params (Stored here for abbreviation)
 export type PRRetrievalParams = {
@@ -130,18 +129,6 @@ export default class ContextService {
    */
   public getIssueCommentCreator(context: HookContext): (issue: GHIssue, comment: string) => Promise<boolean> {
     return async (issue: GHIssue, comment: string) =>
-      await this._githubService.createIssueComment(context.octokit, this.getRepoOwnerData(context), issue, comment);
-  }
-
-  /**
-   * Returns an function that creates comments on a `Github Issue`.
-   * @param context - Object returned from Probot's EventHook.
-   * @param issue - Objects that Github classifies as 'Issues'
-   * @returns an async function that adds a comment on a 'Github Issue' and
-   * resolves to true if commenting was successful and false otherwise.
-   */
-  private getGHIssueCommentCreator(context: HookContext): (issue: GHIssue | GHPr, comment: string) => Promise<boolean> {
-    return async (issue: GHIssue | GHPr, comment: string) =>
       await this._githubService.createIssueComment(context.octokit, this.getRepoOwnerData(context), issue, comment);
   }
 
@@ -367,12 +354,21 @@ export default class ContextService {
   /**
    * Returns the nested Pull Request data from context.
    * @param context - Object returned from Probot's EventHook.
-   * @returns GHPr Object containing data about pull request in
+   * @returns Promise of GHPr Object containing data about pull request in
    * context.
    */
-  public extractPullRequestFromHook(context: HookContext): GHPr {
-    console.log(context.payload?.pull_request);
-    return context.payload?.pull_request as GHPr;
+  public async extractPullRequestFromHook(context: HookContext): Promise<GHPr | undefined> {
+    const pr: GHPr | undefined = context.payload?.pull_request as GHPr;
+
+    if (!pr) {
+      return pr;
+    }
+
+    if (!await this._githubService.updatePRComments(pr)) {
+      console.error('Failed to update PR Comments');
+    }
+
+    return pr;
   }
 
   /**

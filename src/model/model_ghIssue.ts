@@ -32,6 +32,6 @@ export default interface GHIssue {
 
 export class GHIssueHandler {
   public static FindLabelByType(ghIssue: GHIssue, type: LabelCollectionType): GHLabel | undefined {
-    return ghIssue.labels.find((label: GHLabel) => label.name.includes(type));
+    return ghIssue.labels.find((label: GHLabel) => label.name!.includes(type));
   }
 }

@@ -7,10 +7,10 @@ export default class User {
   private _type: string;
 
   constructor(ghUser: GHUser) {
-    this._login = ghUser.login;
-    this._id = ghUser.id;
-    this._url = ghUser.url;
-    this._type = ghUser.type;
+    this._login = ghUser.login!;
+    this._id = ghUser.id!;
+    this._url = ghUser.url!;
+    this._type = ghUser.type!;
   }
 
   public get login(): string {

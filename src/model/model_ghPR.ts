@@ -3,6 +3,7 @@ import GHUser from './model_ghUser';
 import GHMilestone from './model_ghMilestone';
 import { LabelCollectionType } from './model_labelCollection';
 import LabelType from './model_label_type';
+import GHPRComment from './model_ghPrComment';
 
 export default interface GHPr {
   url: string;
@@ -18,6 +19,8 @@ export default interface GHPr {
   merged_at?: string | null;
   milestone?: GHMilestone | null;
   draft?: boolean;
+  comments_url?: string;
+  comments?: GHPRComment[];
 }
 
 export class GHPrHandler {

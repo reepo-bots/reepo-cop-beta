@@ -3,18 +3,22 @@ import GHIssue from '../model/model_ghIssue';
 import GHLabel from '../model/model_ghLabel';
 import GHPr from '../model/model_ghPR';
 import GHRelease from '../model/model_ghRelease';
+import fetch from 'node-fetch';
 
 type Octokit = InstanceType<typeof ProbotOctokit>;
 export type RepoOwnerData = {
   owner: string;
   repo: string;
 };
+export type GithubApiRequirements = {
+  octokit: Octokit;
+  repoOwnerData: RepoOwnerData;
+};
 
 export default class GithubService {
   private readonly STATUS_OK: number = 200;
   private readonly STATUS_CREATED: number = 201;
   private readonly STATUS_FAILED: number = -1; // TODO: Replace Custom Error Code Usage
-
 
   /**
    * Creates a comment on a Github Issue / Pull Request
@@ -25,19 +29,44 @@ export default class GithubService {
    * @returns A promise of true if comment was successfully created,
    * false otherwise
    */
-  public async createIssueComment(octokit: Octokit, repoOwnerData: RepoOwnerData, issue: GHIssue | GHPr, commentBody: string) {
+  public async createIssueComment(
+    octokit: Octokit,
+    repoOwnerData: RepoOwnerData,
+    issue: GHIssue | GHPr,
+    commentBody: string
+  ) {
     try {
       const { status }: { status: number } = await octokit.issues
         .createComment({
           ...repoOwnerData,
           issue_number: issue.number,
-          body: commentBody
+          body: commentBody,
         })
         .catch(() => {
           return { status: this.STATUS_FAILED };
         });
 
       return status === this.STATUS_CREATED;
+    } catch (err: any) {
+      return false;
+    }
+  }
+
+  /**
+   * Updates a Pull Request's (@type GHPr) list of comments.
+   * @param pr - Pull Request (@type GHPr) to fetch comments from.
+   * @returns A Promise of true if the Pull Request could update its
+   * list of comments.
+   */
+  public async updatePRComments(pr: GHPr): Promise<boolean> {
+    try {
+      if (!pr.comments_url) {
+        return true;
+      }
+      const data = await fetch(pr.comments_url);
+      pr.comments = data.status === this.STATUS_OK ? await data.json() : [];
+
+      return data.status === this.STATUS_OK;
     } catch (err: any) {
       return false;
     }

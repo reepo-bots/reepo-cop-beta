@@ -2,7 +2,7 @@
   "name": "reepo-cop",
   "version": "1.0.0",
   "private": true,
-  "description": "A Probot App that helps you police your repository",
+  "description": "A Probot App that helps you *police* your repository",
   "author": "ptvrajsk <ptvrajsk@gmail.com>",
   "license": "ISC",
   "homepage": "https://github.com/ptvrajsk/reepo-cop",
@@ -13,13 +13,15 @@
   ],
   "scripts": {
     "build:dev": "tsc -p ./tsconfig-dev.json",
-    "dev": "npm run build:dev && probot run ./lib/index.js",
+    "dev": "npm run build:dev && probot run ./lib/src/index.js",
     "build": "tsc -p ./tsconfig.json",
     "postinstall": "tsc -p ./tsconfig.json",
-    "start": "probot run ./lib/index.js",
+    "start": "probot run ./lib/src/index.js",
     "test": "jest"
   },
   "dependencies": {
+    "@types/node-fetch": "^2.5.10",
+    "node-fetch": "^2.6.1",
     "probot": "^11.0.1"
   },
   "devDependencies": {

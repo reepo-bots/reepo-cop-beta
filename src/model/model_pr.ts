@@ -14,7 +14,7 @@ export enum PRAction {
 
 export default class PullRequest {
   private _number: number;
-  private _state: 'open' | 'closed' | 'all';
+  private _state: string;
   private _title: string;
   private _user: User;
   private _body: string;
@@ -29,13 +29,13 @@ export default class PullRequest {
     this._number = ghPR.number;
     this._state = ghPR.state;
     this._title = ghPR.title;
-    this._user = new User(ghPR.user);
-    this._body = ghPR.body;
+    this._user = new User(ghPR.user!);
+    this._body = ghPR.body!;
     this._labels = LABEL_ARCHIVE.mapGHLabels(ghPR.labels);
     this._created_at = ghPR.created_at;
     this._updated_at = ghPR.updated_at;
-    this._closed_at = ghPR?.closed_at;
-    this._merged_at = ghPR?.merged_at;
+    this._closed_at = ghPR?.closed_at!;
+    this._merged_at = ghPR?.merged_at!;
     this._draft = ghPR?.draft;
   }
 
