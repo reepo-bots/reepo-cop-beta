@@ -32,7 +32,7 @@ export = (app: Probot) => {
    * some PR actions (i.e. Convert to draft) so this callback
    * can be used to run processes for those actions.
    */
-  app.on(['pull_request'], async (context: HookContext) => {
+  app.on('pull_request', async (context: HookContext) => {
     // 'as string' is necessary to prevent type checking.
     switch (context.payload.action as string) {
       case 'converted_to_draft':
