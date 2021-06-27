@@ -6,7 +6,7 @@ import BotService from './services/botService';
 const _botService: BotService = new BotService();
 
 export = (app: Probot) => {
-  app.on(['release.created'], async (context: HookContext) => {
+  app.on('release.created', async (context: HookContext) => {
     await _botService.updateDraftRelease(context);
   });
 
