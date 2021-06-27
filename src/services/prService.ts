@@ -130,7 +130,6 @@ export default class PRService {
       ghPr,
       LabelCollectionType.AspectCollection
     );
-    const aspectLabelNamesToReplace: string[] = existingAspectLabel ? [existingAspectLabel.name!] : [];
 
     if (!labellingPriority) {
       return true;
@@ -139,11 +138,22 @@ export default class PRService {
     switch (labellingPriority) {
       case 'Manual':
         const manualLabelName: string = this.fetchManualAspectLabelName(firstLineOfBody);
-        return prLabelReplacer(aspectLabelNamesToReplace, manualLabelName ? [manualLabelName] : []);
+
+        // Do not perform a replacement if labels are same
+        if (existingAspectLabel?.name! === manualLabelName) {
+          return true;
+        }
+
+        return prLabelReplacer([existingAspectLabel?.name!], manualLabelName ? [manualLabelName] : []);
       case 'Linked-Issue':
         const linkedLabelName: string = await this.fetchLinkedAspectLabelName(firstLineOfBody, issueRetriever);
-        await prLabelReplacer(aspectLabelNamesToReplace, linkedLabelName ? [linkedLabelName] : []);
-        return true;
+
+        // Do not perform a replacement if labels are same
+        if (existingAspectLabel?.name! === linkedLabelName) {
+          return true;
+        }
+
+        return await prLabelReplacer([existingAspectLabel?.name!], linkedLabelName ? [linkedLabelName] : []);
       default:
         return true;
     }

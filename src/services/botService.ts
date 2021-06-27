@@ -50,13 +50,13 @@ export default class BotService {
     const prHandlingResults: boolean[] = [];
     await this.handleLabelValidation(context);
 
-    if (prAction === PRAction.EDITED || prAction === PRAction.READY_FOR_REVIEW) {
-      const pr: GHPr | undefined = await this._contextService.extractPullRequestFromHook(context);
-      if (!pr) {
-        console.error('Unable to handle PR: No PR in context');
-        return false;
-      }
+    const pr: GHPr | undefined = await this._contextService.extractPullRequestFromHook(context);
+    if (!pr) {
+      console.error('Unable to handle PR: No PR in context');
+      return false;
+    }
 
+    if (prAction === PRAction.EDITED || prAction === PRAction.READY_FOR_REVIEW) {
       prHandlingResults.push(
         await this._prService.validatePRCommitMessageProposal(
           pr,
@@ -70,8 +70,8 @@ export default class BotService {
       );
     }
 
-    if (prAction === PRAction.READY_FOR_REVIEW || prAction === PRAction.CONVERTED_TO_DRAFT) {
-      prHandlingResults.push(await this.handlePRLabelReplacement(context, prAction));
+    if (prAction === PRAction.READY_FOR_REVIEW || prAction === PRAction.CONVERTED_TO_DRAFT || prAction === PRAction.OPENED) {
+      prHandlingResults.push(await this.handlePRLabelReplacement(context, pr, prAction));
     }
 
     return prHandlingResults.reduce(
@@ -86,15 +86,7 @@ export default class BotService {
    * @param prAction - PR's Condition (What action to PR triggered this hook.)
    * @returns promise of true if label replacement was successful, false otherwise.
    */
-  private async handlePRLabelReplacement(context: HookContext, prAction: PRAction): Promise<boolean> {
-    await this.handleLabelValidation(context);
-
-    const pr: GHPr | undefined = await this._contextService.extractPullRequestFromHook(context);
-    if (!pr) {
-      console.error('Unable to handle PR Label Replacement: No PR in context');
-      return false;
-    }
-
+  private async handlePRLabelReplacement(context: HookContext, pr: GHPr, prAction: PRAction): Promise<boolean> {
     return this._prService.replaceExistingPRLabels(
       this._contextService.getPRLabelReplacer(context),
       this._contextService.extractLabelsFromPRHook(context),

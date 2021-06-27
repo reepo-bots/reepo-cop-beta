@@ -18,14 +18,14 @@ export default class LabelService {
   } {
     const missingLabels: Label[] = LABEL_ARCHIVE.collatePresetLabels();
     const outdatedLabels: Map<GHLabel, Label> = new Map<GHLabel, Label>();
-    const presetSubstrIdentifiers: Map<string[], Label> = LABEL_ARCHIVE.collatePresetSubstringMap();
+    const presetLabelAliasesMap: Map<string[], Label> = LABEL_ARCHIVE.collatePresetLabelAliasMap();
 
-    presetSubstrIdentifiers.forEach(async (label: Label, substrings: string[]) => {
-      for (const substr of substrings) {
+    presetLabelAliasesMap.forEach(async (label: Label, aliases: string[]) => {
+      for (const alias of aliases) {
         let isMatched = false;
 
         for (const ghLabelIndex in ghLabels) {
-          if (ghLabels[ghLabelIndex].name!.toLowerCase().includes(substr)) {
+          if (ghLabels[ghLabelIndex].name!.toLowerCase().includes(alias)) {
             isMatched = true;
 
             if (!label.equal(ghLabels[ghLabelIndex])) {

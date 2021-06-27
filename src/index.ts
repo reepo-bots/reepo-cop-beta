@@ -10,12 +10,13 @@ export = (app: Probot) => {
     await _botService.updateDraftRelease(context);
   });
 
-  app.on(
-    ['pull_request.opened', 'pull_request.reopened', 'pull_request.ready_for_review'],
-    async (context: HookContext) => {
-      await _botService.handlePR(context, PRAction.READY_FOR_REVIEW);
-    }
-  );
+  app.on('pull_request.ready_for_review', async (context: HookContext) => {
+    await _botService.handlePR(context, PRAction.READY_FOR_REVIEW);
+  });
+
+  app.on(['pull_request.opened', 'pull_request.reopened'], async (context: HookContext) => {
+    await _botService.handlePR(context, PRAction.OPENED);
+  });
 
   app.on('pull_request.edited', async (context: HookContext) => {
     await _botService.handlePR(context, PRAction.EDITED);
