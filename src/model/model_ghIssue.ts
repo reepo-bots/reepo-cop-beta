@@ -1,4 +1,5 @@
 import GHLabel from './model_ghLabel';
+import GHMilestone from './model_ghMilestone';
 import GHUser from './model_ghUser';
 import { LabelCollectionType } from './model_labelCollection';
 
@@ -19,7 +20,7 @@ export default interface GHIssue {
   locked: false;
   assignee: GHUser;
   assignees: GHUser[];
-  // milestone: any, TODO: Refine Milestone Interface
+  milestone?: GHMilestone | null;
   comments: number;
   created_at: string;
   updated_at: string;

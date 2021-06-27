@@ -2,7 +2,7 @@ import GHLabel from '../model/model_ghLabel';
 import LabelService from './labelService';
 import { LabelCollectionType } from '../model/model_labelCollection';
 import { LABEL_ARCHIVE } from '../constants/const_labels';
-import { PRAction } from '../model/model_pr';
+import { PRAction } from '../model/model_pr_action';
 import { PRType } from '../model/model_label_type';
 import GHPr, { GHPrHandler } from '../model/model_ghPR';
 import Label from '../model/model_label';

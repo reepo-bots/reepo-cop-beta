@@ -23,7 +23,7 @@ export default class ReleaseService {
    */
   public async updateReleaseChangelog(
     currentRelease: GHRelease,
-    last_release_retriever: () => Promise<GHRelease | undefined>,
+    last_release_retriever: (type: 'draft' | 'published') => Promise<GHRelease | undefined>,
     merged_pr_retriever: (prRetrievalParams: PRRetrievalParams) => Promise<GHPr[]>,
     release_updater: (updatedRelease: GHRelease) => Promise<boolean>
   ): Promise<boolean> {
@@ -32,7 +32,7 @@ export default class ReleaseService {
       return true;
     }
 
-    const lastRelease: GHRelease | undefined = await last_release_retriever();
+    const lastRelease: GHRelease | undefined = await last_release_retriever('published');
     const recentlyMergedPRs: GHPr[] = (
       await merged_pr_retriever({
         filter: 'changelog-able',

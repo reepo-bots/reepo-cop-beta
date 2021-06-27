@@ -30,8 +30,7 @@ export default class GithubService {
    * false otherwise
    */
   public async createIssueComment(
-    octokit: Octokit,
-    repoOwnerData: RepoOwnerData,
+    { octokit, repoOwnerData }: GithubApiRequirements,
     issue: GHIssue | GHPr,
     commentBody: string
   ) {
@@ -79,7 +78,7 @@ export default class GithubService {
    * @param ghLabel - Label to be created
    * @returns A promise of true if label creation is successful, false otherwise
    */
-  public async createLabel(octokit: Octokit, repoOwnerData: RepoOwnerData, ghLabel: GHLabel): Promise<boolean> {
+  public async createLabel({ octokit, repoOwnerData }: GithubApiRequirements, ghLabel: GHLabel): Promise<boolean> {
     try {
       const { status }: { status: number } = await octokit.rest.issues
         .createLabel({
@@ -107,8 +106,7 @@ export default class GithubService {
    * resolves to an empty array otherwise
    */
   public async fetchPullRequests(
-    octokit: Octokit,
-    repoOwnerData: RepoOwnerData,
+    { octokit, repoOwnerData }: GithubApiRequirements,
     filterData: { pr_per_page?: number; pages?: number }
   ): Promise<GHPr[]> {
     try {
@@ -143,8 +141,7 @@ export default class GithubService {
    * otherwise.
    */
   public async updateRelease(
-    octokit: Octokit,
-    repoOwnerData: RepoOwnerData,
+    { octokit, repoOwnerData }: GithubApiRequirements,
     updatedRelease: GHRelease
   ): Promise<boolean> {
     try {

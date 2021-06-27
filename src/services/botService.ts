@@ -3,7 +3,7 @@ import PRService from './prService';
 import ContextService, { HookContext } from './contextService';
 import IssueService from './issueService';
 import ReleaseService from './releaseService';
-import { PRAction } from '../model/model_pr';
+import { PRAction } from '../model/model_pr_action';
 import GHRelease from '../model/model_ghRelease';
 import GHPr from '../model/model_ghPR';
 
@@ -24,9 +24,8 @@ export default class BotService {
 
   public async updateDraftRelease(context: HookContext): Promise<boolean> {
     const existingRelease: GHRelease | undefined = await this._contextService.getLastReleaseRetriever(
-      context,
-      'draft'
-    )();
+      context
+    )('draft');
 
     if (!existingRelease) {
       return true;
@@ -34,7 +33,7 @@ export default class BotService {
 
     return this._releaseService.updateReleaseChangelog(
       existingRelease,
-      this._contextService.getLastReleaseRetriever(context, 'published'),
+      this._contextService.getLastReleaseRetriever(context),
       this._contextService.getPRRetriever(context),
       this._contextService.getReleaseUpdater(context)
     );

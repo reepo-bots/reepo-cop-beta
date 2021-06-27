@@ -1,5 +1,5 @@
 import { Probot } from 'probot';
-import { PRAction } from './model/model_pr';
+import { PRAction } from './model/model_pr_action';
 import { HookContext } from './services/contextService';
 import BotService from './services/botService';
 

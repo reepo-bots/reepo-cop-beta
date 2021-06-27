@@ -4,7 +4,7 @@ import GHIssue from '../model/model_ghIssue';
 import GHLabel from '../model/model_ghLabel';
 import GHUser from '../model/model_ghUser';
 import GHPr, { GHPrHandler } from '../model/model_ghPR';
-import GithubService, { RepoOwnerData } from './githubService';
+import GithubService, { GithubApiRequirements, RepoOwnerData } from './githubService';
 import { LabelCollectionType } from '../model/model_labelCollection';
 import { ChangelogType } from '../model/model_label_type';
 
@@ -42,6 +42,16 @@ export default class ContextService {
   }
 
   /**
+   * Prepares an Github API Requirements package from input
+   * context.
+   * @param context - Object returned from Probot's EventHook.
+   * @returns a GithubApiRequrements object.
+   */
+  private getGHApiRequirements(context: HookContext): GithubApiRequirements {
+    return { octokit: context.octokit, repoOwnerData: this.getRepoOwnerData(context) };
+  }
+
+  /**
    * Returns a function that creates a comment on a PR.
    * @param context - Object returned from Probot's EventHook.
    * @param pr - GHPr Object retrieved from context.
@@ -52,7 +62,11 @@ export default class ContextService {
     // This works because Github treats both PRs and Issues as 'Github Issues'
     // in this case.
     return async (pr: GHPr, comment: string) =>
-      await this._githubService.createIssueComment(context.octokit, this.getRepoOwnerData(context), pr, comment);
+      await this._githubService.createIssueComment(
+        this.getGHApiRequirements(context),
+        pr,
+        comment
+      );
   }
 
   /**
@@ -63,7 +77,7 @@ export default class ContextService {
    */
   public getReleaseUpdater(context: HookContext): (updatedRelease: GHRelease) => Promise<boolean> {
     return async (updatedRelease: GHRelease) => {
-      return await this._githubService.updateRelease(context.octokit, this.getRepoOwnerData(context), updatedRelease);
+      return await this._githubService.updateRelease(this.getGHApiRequirements(context), updatedRelease);
     };
   }
 
@@ -77,8 +91,7 @@ export default class ContextService {
     return async (prParams: PRRetrievalParams) => {
       // Fetched Data De-Construction
       const fetchedPRs: GHPr[] = await this._githubService.fetchPullRequests(
-        context.octokit,
-        this.getRepoOwnerData(context),
+        this.getGHApiRequirements(context),
         { pr_per_page: prParams.pr_per_page, pages: prParams.pages }
       );
 
@@ -133,7 +146,11 @@ export default class ContextService {
    */
   public getIssueCommentCreator(context: HookContext): (issue: GHIssue, comment: string) => Promise<boolean> {
     return async (issue: GHIssue, comment: string) =>
-      await this._githubService.createIssueComment(context.octokit, this.getRepoOwnerData(context), issue, comment);
+      await this._githubService.createIssueComment(
+        this.getGHApiRequirements(context),
+        issue,
+        comment
+      );
   }
 
   /**
@@ -169,11 +186,14 @@ export default class ContextService {
    */
   public getLabelCreator(context: HookContext): (name: string, desc: string, color: string) => Promise<boolean> {
     return async (name: string, desc: string, color: string) => {
-      return await this._githubService.createLabel(context.octokit, this.getRepoOwnerData(context), {
-        name: name,
-        description: desc,
-        color: color,
-      } as GHLabel);
+      return await this._githubService.createLabel(
+        this.getGHApiRequirements(context),
+        {
+          name: name,
+          description: desc,
+          color: color,
+        } as GHLabel
+      );
     };
   }
 
@@ -278,11 +298,17 @@ export default class ContextService {
     };
   }
 
+  /**
+   * Crafts a function that retrieves the most recent release based
+   * on inputs.
+   * @param context - Object returned from Probot's Eventhook.
+   * @param type - Type of Release that is to be retrieved.
+   * @returns a callback function that retrieves the last release.
+   */
   public getLastReleaseRetriever(
     context: HookContext,
-    type: 'draft' | 'published'
-  ): () => Promise<GHRelease | undefined> {
-    return async () => {
+  ): (type: 'draft' | 'published') => Promise<GHRelease | undefined> {
+    return async (type: 'draft' | 'published') => {
       const { data, status }: { data: GHRelease[] | any[]; status: number } = await context.octokit.repos.listReleases({
         ...this.getRepoOwnerData(context),
       });
