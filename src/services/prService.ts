@@ -2,13 +2,35 @@ import GHLabel from '../model/model_ghLabel';
 import LabelService from './labelService';
 import { LabelCollectionType } from '../model/model_labelCollection';
 import { LABEL_ARCHIVE } from '../constants/const_labels';
-import { PRAction } from '../model/model_pr';
+import { PRAction } from '../model/model_pr_action';
 import { PRType } from '../model/model_label_type';
 import GHPr, { GHPrHandler } from '../model/model_ghPR';
 import Label from '../model/model_label';
 import GHIssue, { GHIssueHandler } from '../model/model_ghIssue';
+import GHPRComment from '../model/model_ghPrComment';
+import { GHUserHandler } from '../model/model_ghUser';
+import * as packageJson from '../../package.json';
+import { PRRetrievalParams } from './contextService';
 
 export default class PRService {
+  private readonly COMMIT_MESSAGE_VALIDATION_TITLE = '<h3 align="center">Commit Message Validation</h3>\n\n';
+  // Milestone PR Counts - (When to congratulate the Issue Author)
+  private readonly milestones: number[] = [1, 25, 50, 75, 100];
+
+  /**
+   * A function to get an appropriate postfix based on milestone count.
+   * @param milestone - Number representing PR Milestone Count.
+   * @returns string that functions as a postfix to specified Milestone count.
+   */
+  private getMilestonePostfix(milestone: number): string {
+    switch (milestone) {
+      case 1:
+        return 'st';
+      default:
+        return 'th';
+    }
+  }
+
   /**
    * Replaces existing PR Labels with new labels based on the PR Action.
    * @param labelReplacer - A function that removes a set of labels and adds another to a PR.
@@ -40,6 +62,22 @@ export default class PRService {
     }
 
     return labelReplacer(labelNamesToRemove, labelNamesToAdd);
+  }
+
+  public async handlePRCongratulation(
+    pr: GHPr,
+    prRetriever: (prParams: PRRetrievalParams) => Promise<GHPr[]>,
+    prCommenter: (pr: GHPr, comment: string) => Promise<boolean>
+  ): Promise<boolean> {
+    const numPRCount: number = (await prRetriever({ filter: undefined, author: pr.user?.login })).length
+    
+    if (!this.milestones.includes(numPRCount)) {
+      return true; //Signifies successful handling (i.e. No Error)
+    }
+
+    return await prCommenter(pr, `Congratulations on opening your ${numPRCount}${this.getMilestonePostfix(
+      numPRCount
+    )} Pull Request! 😁🎊👍`);
   }
 
   private getAspectLabellingPriority(firstLineOfBody?: string): 'Linked-Issue' | 'Manual' | null {
@@ -100,7 +138,7 @@ export default class PRService {
       return '';
     }
 
-    return aspectLabel.name;
+    return aspectLabel.name!;
   }
 
   /**
@@ -115,7 +153,7 @@ export default class PRService {
     prLabelReplacer: (removalLabelName: string[], replacementLabelNames: string[]) => Promise<boolean>,
     issueRetriever: (issueNumber: number) => Promise<GHIssue | undefined>
   ): Promise<boolean> {
-    if (ghPr?.draft) {
+    if (ghPr?.draft || !ghPr.body) {
       return true;
     }
 
@@ -125,7 +163,6 @@ export default class PRService {
       ghPr,
       LabelCollectionType.AspectCollection
     );
-    const aspectLabelNamesToReplace: string[] = existingAspectLabel ? [existingAspectLabel.name] : [];
 
     if (!labellingPriority) {
       return true;
@@ -134,11 +171,22 @@ export default class PRService {
     switch (labellingPriority) {
       case 'Manual':
         const manualLabelName: string = this.fetchManualAspectLabelName(firstLineOfBody);
-        return prLabelReplacer(aspectLabelNamesToReplace, manualLabelName ? [manualLabelName] : []);
+
+        // Do not perform a replacement if labels are same
+        if (existingAspectLabel?.name! === manualLabelName) {
+          return true;
+        }
+
+        return prLabelReplacer([existingAspectLabel?.name!], manualLabelName ? [manualLabelName] : []);
       case 'Linked-Issue':
         const linkedLabelName: string = await this.fetchLinkedAspectLabelName(firstLineOfBody, issueRetriever);
-        await prLabelReplacer(aspectLabelNamesToReplace, linkedLabelName ? [linkedLabelName] : []);
-        return true;
+
+        // Do not perform a replacement if labels are same
+        if (existingAspectLabel?.name! === linkedLabelName) {
+          return true;
+        }
+
+        return await prLabelReplacer([existingAspectLabel?.name!], linkedLabelName ? [linkedLabelName] : []);
       default:
         return true;
     }
@@ -153,10 +201,10 @@ export default class PRService {
    */
   public async validatePRCommitMessageProposal(
     ghPr: GHPr,
-    prCommenter: (comment: string) => Promise<boolean>
+    prCommenter: (pr: GHPr, comment: string) => Promise<boolean>
   ): Promise<boolean> {
     // Do not check if PR is still in draft.
-    if (ghPr?.draft) {
+    if (ghPr?.draft || !ghPr.body) {
       return true;
     }
 
@@ -170,8 +218,38 @@ export default class PRService {
     }
 
     const extractedMessage: string = extractedMessageArray[1].trim();
+
+    const commitMessageCheckRegex: RegExp = /.*```(.*)```.*/gs;
+    const lastCommitCheckComment: GHPRComment | undefined = ghPr.comments
+      ?.filter((comment: GHPRComment) => {
+        return (
+          comment.user?.type === GHUserHandler.USER_TYPE_BOT &&
+          comment.user?.login?.includes(packageJson.name) &&
+          comment?.body?.includes(this.COMMIT_MESSAGE_VALIDATION_TITLE)
+        );
+      })
+      .sort((a: GHPRComment, b: GHPRComment) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
+      .pop();
+    const lastCommitCheckBody: string | undefined = lastCommitCheckComment?.body
+      ? lastCommitCheckComment?.body
+      : undefined;
+
+    if (lastCommitCheckBody) {
+      const extractedPreviousMessageArray: RegExpExecArray | null = commitMessageCheckRegex.exec(lastCommitCheckBody!);
+
+      // Do not proceed with check if previously crafted
+      // verification does not exist.
+      if (extractedPreviousMessageArray) {
+        const extractedPreviousMessage: string = extractedPreviousMessageArray![1].trim();
+
+        if (extractedMessage === extractedPreviousMessage) {
+          return true;
+        }
+      }
+    }
+
     const commitMsgCorrectionMsg: string = this.getCommitMessageCorrectionMessage(extractedMessage);
-    return await prCommenter(commitMsgCorrectionMsg);
+    return await prCommenter(ghPr, commitMsgCorrectionMsg);
   }
 
   /**
@@ -181,7 +259,8 @@ export default class PRService {
    * @returns string containing validation results.
    */
   private getCommitMessageCorrectionMessage(commitMsg: string): string {
-    const VALIDATION_TITLE = '## Commit Message Validation\n';
+    const VALIDATION_TITLE = '<h3 align="center">Commit Message Validation</h3>\n\n';
+    const QUOTED_COMMIT_MSG = `\`\`\`\n${commitMsg}\n\`\`\`\n`;
     const splitMsg: string[] = commitMsg.split('\n');
 
     const validateTitleNoPeriod: (splitMsg: string[]) => string = (splitMsg: string[]) => {
@@ -230,7 +309,7 @@ export default class PRService {
       }
     };
 
-    return `${VALIDATION_TITLE}${validateTitleNoPeriod(splitMsg)}${validateCharCheck(
+    return `${VALIDATION_TITLE}${QUOTED_COMMIT_MSG}${validateTitleNoPeriod(splitMsg)}${validateCharCheck(
       splitMsg
     )}${validateSpaceBetweenTitleAndBody(splitMsg)}`;
   }

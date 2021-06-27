@@ -23,6 +23,29 @@ export default class IssueService {
     }
   }
 
+  public async handleIssueCongratulation(
+    user: GHUser,
+    ghIssue: GHIssue,
+    userIssuesRetriever: (author: string) => Promise<GHIssue[] | undefined>,
+    issueCommentCreator: (issue: GHIssue, comment: string) => Promise<boolean>
+  ): Promise<boolean> {
+    try {
+      const numAuthorsIssues: number = await this.getNumberOfIssuesCreatedByUser(user, userIssuesRetriever);
+      if (this.isUsersMilestone(numAuthorsIssues)) {
+        const commentResult: boolean = await issueCommentCreator(
+          ghIssue,
+          this.getUserMilestoneIssueCongratulation(numAuthorsIssues)
+        );
+
+        return commentResult;
+      }
+
+      return true;
+    } catch (err: any) {
+      return false;
+    }
+  }
+
   /**
    * Attempts to fetch and return an array of GHIssues made by specified
    * author. Promise returns undefined if fetch failed.
@@ -30,11 +53,11 @@ export default class IssueService {
    * @param userIssuesRetriever - A function that retrieves issues by said user.
    * @returns an array of GHIssues or undefined if issue fetch failed.
    */
-  public async getNumberOfIssuesCreatedByUser(
+  private async getNumberOfIssuesCreatedByUser(
     ghUser: GHUser,
     userIssuesRetriever: (author: string) => Promise<GHIssue[] | undefined>
   ): Promise<number> {
-    const usersIssues: GHIssue[] | undefined = await userIssuesRetriever(ghUser.login);
+    const usersIssues: GHIssue[] | undefined = await userIssuesRetriever(ghUser.login!);
     if (!usersIssues) {
       throw new Error(`Unable to retrieve issues made by user ${ghUser.login}`);
     }
@@ -47,7 +70,7 @@ export default class IssueService {
    * @param numberOfUsersIssues - Number of Issues made by users.
    * @returns true/false depending on whether the count of issues is a milestone count.
    */
-  public isUsersMilestone(numberOfUsersIssues: number): boolean {
+  private isUsersMilestone(numberOfUsersIssues: number): boolean {
     for (const milestone of this.milestones) {
       if (numberOfUsersIssues === milestone) {
         return true;
@@ -62,7 +85,7 @@ export default class IssueService {
    * @param numberOfUsersIssues - Number of issues made by user.
    * @returns string containing the congratulation message.
    */
-  public getUserMilestoneIssueCongratulation(numberOfUsersIssues: number): string {
+  private getUserMilestoneIssueCongratulation(numberOfUsersIssues: number): string {
     return `Nice work opening your ${numberOfUsersIssues}${this.getMilestonePostfix(
       numberOfUsersIssues
     )} issue! 😁🎊👍`;
@@ -83,7 +106,8 @@ export default class IssueService {
 
     const autoAspectLabel: Label | undefined = presetLabels.find(
       (label: Label) =>
-        label.name.includes(LabelCollectionType.AspectCollection) && ghIssue.title.toLowerCase().includes(`${label.type.toLowerCase()}:`)
+        label.name.includes(LabelCollectionType.AspectCollection) &&
+        ghIssue.title.toLowerCase().includes(`${label.type.toLowerCase()}:`)
     );
 
     const autoPriorityLabel: Label | undefined = presetLabels.find(
@@ -104,13 +128,15 @@ export default class IssueService {
     }
     if (autoPriorityLabel) {
       labelNamesToAdd.push(autoPriorityLabel.name);
-      existingLabels.push(...LabelService.extractLabelNames(LabelCollectionType.PriorityCollection, ghIssue.labels))
+      existingLabels.push(...LabelService.extractLabelNames(LabelCollectionType.PriorityCollection, ghIssue.labels));
     }
 
     const labelNamesToRemove: string[] = [];
 
     for (const existingLabelName of existingLabels) {
-      const overlappingIndex: number = labelNamesToAdd.findIndex((labelNameToAdd: string) => labelNameToAdd === existingLabelName);
+      const overlappingIndex: number = labelNamesToAdd.findIndex(
+        (labelNameToAdd: string) => labelNameToAdd === existingLabelName
+      );
       if (overlappingIndex !== -1) {
         const spliceIndex: number = labelNamesToAdd.findIndex((nameToAdd: string) => nameToAdd === existingLabelName);
         labelNamesToAdd.splice(spliceIndex, 1);
@@ -118,7 +144,7 @@ export default class IssueService {
         labelNamesToRemove.push(existingLabelName);
       }
     }
-    
+
     return await labelReplacer(labelNamesToRemove, labelNamesToAdd);
   }
 }

@@ -10,7 +10,7 @@ export default class LabelArchive {
     this._labelCollections = labelCollections;
   }
 
-  public collatePresetSubstringMap(): Map<string[], Label> {
+  public collatePresetLabelAliasMap(): Map<string[], Label> {
     const presetSubstrMap: Map<string[], Label> = new Map();
     this._labelCollections.forEach((labelCollection: LabelCollection) => {
       labelCollection.allLabels.forEach((label: Label) => {

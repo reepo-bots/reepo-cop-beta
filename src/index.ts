@@ -1,5 +1,5 @@
 import { Probot } from 'probot';
-import { PRAction } from './model/model_pr';
+import { PRAction } from './model/model_pr_action';
 import { HookContext } from './services/contextService';
 import BotService from './services/botService';
 
@@ -10,12 +10,13 @@ export = (app: Probot) => {
     await _botService.updateDraftRelease(context);
   });
 
-  app.on(
-    ['pull_request.opened', 'pull_request.reopened', 'pull_request.ready_for_review'],
-    async (context: HookContext) => {
-      await _botService.handlePR(context, PRAction.READY_FOR_REVIEW);
-    }
-  );
+  app.on('pull_request.ready_for_review', async (context: HookContext) => {
+    await _botService.handlePR(context, PRAction.READY_FOR_REVIEW);
+  });
+
+  app.on(['pull_request.opened', 'pull_request.reopened'], async (context: HookContext) => {
+    await _botService.handlePR(context, PRAction.OPENED);
+  });
 
   app.on('pull_request.edited', async (context: HookContext) => {
     await _botService.handlePR(context, PRAction.EDITED);
@@ -31,7 +32,7 @@ export = (app: Probot) => {
    * some PR actions (i.e. Convert to draft) so this callback
    * can be used to run processes for those actions.
    */
-  app.on(['pull_request'], async (context: HookContext) => {
+  app.on('pull_request', async (context: HookContext) => {
     // 'as string' is necessary to prevent type checking.
     switch (context.payload.action as string) {
       case 'converted_to_draft':

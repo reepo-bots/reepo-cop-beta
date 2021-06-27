@@ -22,5 +22,5 @@ This aims to help standardize and automate your repository management in a way t
 Feel free to fork this and customize it to your own needs 😃
 
 ## Reference Docs
-- [Probot Bootstrap Doc](../docs/probot_doc.md)
-- [**reepo-cop**'s development](../docs/dev.md)
+- [Probot Bootstrap Doc](./docs/probot_doc.md)
+- [**reepo-cop**'s development](./docs/dev.md)

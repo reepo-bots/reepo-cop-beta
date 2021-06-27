@@ -1,7 +1,7 @@
 import GHLabel from '../model/model_ghLabel';
 import Label from '../model/model_label';
 import { LabelCollectionType } from '../model/model_labelCollection';
-import { PRAction } from '../model/model_pr';
+import { PRAction } from '../model/model_pr_action';
 import { LABEL_ARCHIVE } from '../constants/const_labels';
 import { PRType } from '../model/model_label_type';
 
@@ -18,14 +18,14 @@ export default class LabelService {
   } {
     const missingLabels: Label[] = LABEL_ARCHIVE.collatePresetLabels();
     const outdatedLabels: Map<GHLabel, Label> = new Map<GHLabel, Label>();
-    const presetSubstrIdentifiers: Map<string[], Label> = LABEL_ARCHIVE.collatePresetSubstringMap();
+    const presetLabelAliasesMap: Map<string[], Label> = LABEL_ARCHIVE.collatePresetLabelAliasMap();
 
-    presetSubstrIdentifiers.forEach(async (label: Label, substrings: string[]) => {
-      for (const substr of substrings) {
+    presetLabelAliasesMap.forEach(async (label: Label, aliases: string[]) => {
+      for (const alias of aliases) {
         let isMatched = false;
 
         for (const ghLabelIndex in ghLabels) {
-          if (ghLabels[ghLabelIndex].name.toLowerCase().includes(substr)) {
+          if (ghLabels[ghLabelIndex].name!.toLowerCase().includes(alias)) {
             isMatched = true;
 
             if (!label.equal(ghLabels[ghLabelIndex])) {
@@ -66,7 +66,7 @@ export default class LabelService {
 
     outdatedLabels.forEach(async (updatedLabel: Label, outdatedLabel: GHLabel) => {
       const labelUpdateResult: boolean = await labelUpdater(
-        outdatedLabel.name,
+        outdatedLabel.name!,
         updatedLabel.name,
         updatedLabel.desc,
         updatedLabel.color
@@ -158,8 +158,8 @@ export default class LabelService {
   public static extractLabelNames(labelCollectionType: LabelCollectionType, ghLabels: GHLabel[]) {
     const labelNames: string[] = [];
     for (const label of ghLabels) {
-      if (label.name.includes(`${labelCollectionType}.`)) {
-        labelNames.push(label.name);
+      if (label.name!.includes(`${labelCollectionType}.`)) {
+        labelNames.push(label.name!);
       }
     }
     return labelNames;

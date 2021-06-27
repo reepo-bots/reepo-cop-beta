@@ -129,7 +129,7 @@ export const LABEL_ARCHIVE: LabelArchive = new LabelArchive([
       `🥇 ${LabelCollectionType.IssueCollection}.${IssueType.GoodFirstIssue}`,
       'This issue describes a suggestion that will not be fixed.',
       '7222D8',
-      'good first issue',
+      ['good first issue', IssueType.GoodFirstIssue.toLowerCase()],
       IssueType.GoodFirstIssue
     )
   ])

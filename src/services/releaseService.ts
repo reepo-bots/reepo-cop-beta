@@ -1,13 +1,14 @@
-import GHPr from '../model/model_ghPR';
+import GHPr, { GHPrHandler } from '../model/model_ghPR';
 import GHRelease from '../model/model_ghRelease';
-import PullRequest from '../model/model_pr';
+import { LabelCollectionType } from '../model/model_labelCollection';
+import { PRRetrievalParams } from './contextService';
 
 export default class ReleaseService {
   private readonly CHANGELOG_TITLE: string = '## Changelog';
   private readonly OTHERS_HEADER: string = '### 🧱 Others\n';
   private readonly headerGenerator: (labelName: string) => string = (labelName: string) => {
     const [emoji, title, ..._]: [emoji?: string, title?: string, ..._: string[]] = labelName.split(/ .*\./);
-    return `### ${emoji} ${title}\n`;
+    return `### ${emoji} ${title}s\n`;
   };
 
   /**
@@ -22,38 +23,28 @@ export default class ReleaseService {
    */
   public async updateReleaseChangelog(
     currentRelease: GHRelease,
-    last_release_retriever: () => Promise<GHRelease | undefined>,
-    merged_pr_retriever: ({
-      pr_per_page,
-      pages,
-      filter,
-      date_range,
-    }: {
-      pr_per_page?: number;
-      pages?: number;
-      filter?: 'draft' | 'merged';
-      date_range?: { startDate?: Date; endDate?: Date };
-    }) => Promise<GHPr[]>,
-    release_body_updater: (currentRelease: GHRelease, newReleaseBody: string) => Promise<boolean>
+    last_release_retriever: (type: 'draft' | 'published') => Promise<GHRelease | undefined>,
+    merged_pr_retriever: (prRetrievalParams: PRRetrievalParams) => Promise<GHPr[]>,
+    release_updater: (updatedRelease: GHRelease) => Promise<boolean>
   ): Promise<boolean> {
     //! Do not make changes on a release that is not a draft.
     if (!currentRelease.draft) {
       return true;
     }
 
-    const lastRelease: GHRelease | undefined = await last_release_retriever();
-    const recentlyMergedPRs: PullRequest[] = (
+    const lastRelease: GHRelease | undefined = await last_release_retriever('published');
+    const recentlyMergedPRs: GHPr[] = (
       await merged_pr_retriever({
-        filter: 'merged',
+        filter: 'changelog-able',
         date_range: { startDate: lastRelease ? new Date(lastRelease.published_at!) : undefined },
       })
-    ).map((ghPr: GHPr) => new PullRequest(ghPr));
+    );
 
     const newReleaseBody: string = this.addChangelogToReleaseBody(
       currentRelease,
       this.draftChangelog(recentlyMergedPRs)
     );
-    return await release_body_updater(currentRelease, newReleaseBody);
+    return await release_updater({ ...currentRelease, body: newReleaseBody });
   }
 
   /**
@@ -79,11 +70,11 @@ export default class ReleaseService {
    * @param pullRequests - List of Pull Requests to add to changelog.
    * @returns string representing a format list of changes.
    */
-  private draftChangelog(pullRequests: PullRequest[]): string {
+  private draftChangelog(pullRequests: GHPr[]): string {
     const changelogCollation: { [changelogHeader: string]: string } = {};
 
-    pullRequests.forEach((pullRequest: PullRequest) => {
-      const labelName: string | undefined = pullRequest.getAspectLabel()?.name;
+    pullRequests.forEach((pullRequest: GHPr) => {
+      const labelName: string | undefined = GHPrHandler.FindLabelByType(pullRequest, LabelCollectionType.AspectCollection)?.name;;
 
       // * Complex 1 Liner that Updates / Creates new Collated Changelog.
       changelogCollation[labelName ? this.headerGenerator(labelName) : this.OTHERS_HEADER] = changelogCollation[

@@ -3,8 +3,9 @@ import PRService from './prService';
 import ContextService, { HookContext } from './contextService';
 import IssueService from './issueService';
 import ReleaseService from './releaseService';
-import { PRAction } from '../model/model_pr';
+import { PRAction } from '../model/model_pr_action';
 import GHRelease from '../model/model_ghRelease';
+import GHPr from '../model/model_ghPR';
 
 export default class BotService {
   private _labelService: LabelService;
@@ -23,9 +24,8 @@ export default class BotService {
 
   public async updateDraftRelease(context: HookContext): Promise<boolean> {
     const existingRelease: GHRelease | undefined = await this._contextService.getLastReleaseRetriever(
-      context,
-      'draft'
-    )();
+      context
+    )('draft');
 
     if (!existingRelease) {
       return true;
@@ -33,9 +33,9 @@ export default class BotService {
 
     return this._releaseService.updateReleaseChangelog(
       existingRelease,
-      this._contextService.getLastReleaseRetriever(context, 'published'),
+      this._contextService.getLastReleaseRetriever(context),
       this._contextService.getPRRetriever(context),
-      this._contextService.getReleaseBodyUpdater(context)
+      this._contextService.getReleaseUpdater(context)
     );
   }
 
@@ -49,22 +49,39 @@ export default class BotService {
     const prHandlingResults: boolean[] = [];
     await this.handleLabelValidation(context);
 
+    const pr: GHPr | undefined = await this._contextService.extractPullRequestFromHook(context);
+    if (!pr) {
+      console.error('Unable to handle PR: No PR in context');
+      return false;
+    }
+
+    if (prAction === PRAction.OPENED || prAction === PRAction.READY_FOR_REVIEW || true) {
+      prHandlingResults.push(
+        await this._prService.handlePRCongratulation(
+          pr,
+          this._contextService.getPRRetriever(context),
+          this._contextService.getPRCommenter(context)
+        )
+      )
+    }
+
     if (prAction === PRAction.EDITED || prAction === PRAction.READY_FOR_REVIEW) {
       prHandlingResults.push(
-        await this._prService.validatePRCommitMessageProposal(
-          this._contextService.extractPullRequestFromHook(context),
-          this._contextService.getPRCommenter(context)
-        ),
+        await this._prService.validatePRCommitMessageProposal(pr, this._contextService.getPRCommenter(context)),
         await this._prService.assignAspectLabel(
-          this._contextService.extractPullRequestFromHook(context),
+          pr,
           this._contextService.getPRLabelReplacer(context),
           this._contextService.getIssueRetriever(context)
         )
       );
     }
 
-    if (prAction === PRAction.READY_FOR_REVIEW || prAction === PRAction.CONVERTED_TO_DRAFT) {
-      prHandlingResults.push(await this.handlePRLabelReplacement(context, prAction));
+    if (
+      prAction === PRAction.READY_FOR_REVIEW ||
+      prAction === PRAction.CONVERTED_TO_DRAFT ||
+      prAction === PRAction.OPENED
+    ) {
+      prHandlingResults.push(await this.handlePRLabelReplacement(context, pr, prAction));
     }
 
     return prHandlingResults.reduce(
@@ -79,14 +96,12 @@ export default class BotService {
    * @param prAction - PR's Condition (What action to PR triggered this hook.)
    * @returns promise of true if label replacement was successful, false otherwise.
    */
-  private async handlePRLabelReplacement(context: HookContext, prAction: PRAction): Promise<boolean> {
-    await this.handleLabelValidation(context);
-
+  private async handlePRLabelReplacement(context: HookContext, pr: GHPr, prAction: PRAction): Promise<boolean> {
     return this._prService.replaceExistingPRLabels(
       this._contextService.getPRLabelReplacer(context),
       this._contextService.extractLabelsFromPRHook(context),
       prAction,
-      this._contextService.extractPullRequestFromHook(context)
+      pr
     );
   }
 
@@ -103,21 +118,12 @@ export default class BotService {
   ): Promise<boolean> {
     switch (congratulationType) {
       case 'Issue':
-        const userIssueCount: number = await this._issueService.getNumberOfIssuesCreatedByUser(
+        return await this._issueService.handleIssueCongratulation(
           this._contextService.extractUserFromIssueHook(context),
-          this._contextService.getAuthorsIssuesRetriever(context)
+          this._contextService.extractIssueFromHook(context),
+          this._contextService.getAuthorsIssuesRetriever(context),
+          this._contextService.getIssueCommentCreator(context)
         );
-        if (this._issueService.isUsersMilestone(userIssueCount)) {
-          const congPostResult: boolean = await this._contextService.getIssueCommentCreator(context)(
-            this._issueService.getUserMilestoneIssueCongratulation(userIssueCount)
-          );
-          if (!congPostResult) {
-            console.log('Unable to Post Congratulatory comment on Issue.');
-          }
-          return congPostResult;
-        }
-        break;
-
       case 'PR':
         console.log('PR Congratulation Function - Work In Progress');
         return false;
