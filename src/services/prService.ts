@@ -10,9 +10,26 @@ import GHIssue, { GHIssueHandler } from '../model/model_ghIssue';
 import GHPRComment from '../model/model_ghPrComment';
 import { GHUserHandler } from '../model/model_ghUser';
 import * as packageJson from '../../package.json';
+import { PRRetrievalParams } from './contextService';
 
 export default class PRService {
   private readonly COMMIT_MESSAGE_VALIDATION_TITLE = '<h3 align="center">Commit Message Validation</h3>\n\n';
+  // Milestone PR Counts - (When to congratulate the Issue Author)
+  private readonly milestones: number[] = [1, 25, 50, 75, 100];
+
+  /**
+   * A function to get an appropriate postfix based on milestone count.
+   * @param milestone - Number representing PR Milestone Count.
+   * @returns string that functions as a postfix to specified Milestone count.
+   */
+  private getMilestonePostfix(milestone: number): string {
+    switch (milestone) {
+      case 1:
+        return 'st';
+      default:
+        return 'th';
+    }
+  }
 
   /**
    * Replaces existing PR Labels with new labels based on the PR Action.
@@ -45,6 +62,22 @@ export default class PRService {
     }
 
     return labelReplacer(labelNamesToRemove, labelNamesToAdd);
+  }
+
+  public async handlePRCongratulation(
+    pr: GHPr,
+    prRetriever: (prParams: PRRetrievalParams) => Promise<GHPr[]>,
+    prCommenter: (pr: GHPr, comment: string) => Promise<boolean>
+  ): Promise<boolean> {
+    const numPRCount: number = (await prRetriever({ filter: undefined, author: pr.user?.login })).length
+    
+    if (!this.milestones.includes(numPRCount)) {
+      return true; //Signifies successful handling (i.e. No Error)
+    }
+
+    return await prCommenter(pr, `Congratulations on opening your ${numPRCount}${this.getMilestonePostfix(
+      numPRCount
+    )} Pull Request! 😁🎊👍`);
   }
 
   private getAspectLabellingPriority(firstLineOfBody?: string): 'Linked-Issue' | 'Manual' | null {

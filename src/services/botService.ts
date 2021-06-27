@@ -56,12 +56,19 @@ export default class BotService {
       return false;
     }
 
+    if (prAction === PRAction.OPENED || prAction === PRAction.READY_FOR_REVIEW || true) {
+      prHandlingResults.push(
+        await this._prService.handlePRCongratulation(
+          pr,
+          this._contextService.getPRRetriever(context),
+          this._contextService.getPRCommenter(context)
+        )
+      )
+    }
+
     if (prAction === PRAction.EDITED || prAction === PRAction.READY_FOR_REVIEW) {
       prHandlingResults.push(
-        await this._prService.validatePRCommitMessageProposal(
-          pr,
-          this._contextService.getPRCommenter(context)
-        ),
+        await this._prService.validatePRCommitMessageProposal(pr, this._contextService.getPRCommenter(context)),
         await this._prService.assignAspectLabel(
           pr,
           this._contextService.getPRLabelReplacer(context),
@@ -70,7 +77,11 @@ export default class BotService {
       );
     }
 
-    if (prAction === PRAction.READY_FOR_REVIEW || prAction === PRAction.CONVERTED_TO_DRAFT || prAction === PRAction.OPENED) {
+    if (
+      prAction === PRAction.READY_FOR_REVIEW ||
+      prAction === PRAction.CONVERTED_TO_DRAFT ||
+      prAction === PRAction.OPENED
+    ) {
       prHandlingResults.push(await this.handlePRLabelReplacement(context, pr, prAction));
     }
 

@@ -16,6 +16,7 @@ export type PRRetrievalParams = {
   pages?: number;
   filter?: 'draft' | 'merged' | 'changelog-able';
   date_range?: { startDate?: Date; endDate?: Date };
+  author?: string;
 };
 
 /**
@@ -90,7 +91,8 @@ export default class ContextService {
               GHPrHandler.IsPrWithinDateTimeConstraints(pr, 'updated_at', {
                 startDateTime: prParams.date_range?.startDate,
                 endDateTime: prParams.date_range?.endDate,
-              })
+              }) &&
+              (prParams.author ? pr.user?.login === prParams.author : true)
           );
         case 'merged':
           return fetchedPRs.filter(
@@ -100,7 +102,8 @@ export default class ContextService {
               GHPrHandler.IsPrWithinDateTimeConstraints(pr, 'merged_at', {
                 startDateTime: prParams.date_range?.startDate,
                 endDateTime: prParams.date_range?.endDate,
-              })
+              }) &&
+              (prParams.author ? pr.user?.login === prParams.author : true)
           );
         case 'changelog-able':
           return fetchedPRs.filter(
@@ -111,7 +114,8 @@ export default class ContextService {
                 startDateTime: prParams.date_range?.startDate,
                 endDateTime: prParams.date_range?.endDate,
               }) &&
-              !GHPrHandler.FindLabelByType(pr, LabelCollectionType.ChangelogCollection, ChangelogType.DoNotList)
+              !GHPrHandler.FindLabelByType(pr, LabelCollectionType.ChangelogCollection, ChangelogType.DoNotList) &&
+              (prParams.author ? pr.user?.login === prParams.author : true)
           );
         default:
           return fetchedPRs;
@@ -364,7 +368,7 @@ export default class ContextService {
       return pr;
     }
 
-    if (!await this._githubService.updatePRComments(pr)) {
+    if (!(await this._githubService.updatePRComments(pr))) {
       console.error('Failed to update PR Comments');
     }
 
