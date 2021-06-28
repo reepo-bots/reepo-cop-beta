@@ -152,7 +152,7 @@ export default class PRService {
     prLabelReplacer: (removalLabelName: string[], replacementLabelNames: string[]) => Promise<boolean>,
     issueRetriever: (issueNumber: number) => Promise<GHIssue | undefined>
   ): Promise<boolean> {
-    if (ghPr?.draft || !ghPr.body) {
+    if (ghPr?.draft || !ghPr.body || ghPr?.merged_at) {
       return true;
     }
 
@@ -204,7 +204,7 @@ export default class PRService {
     prCommenter: (pr: GHPr, comment: string) => Promise<boolean>
   ): Promise<boolean> {
     // Do not check if PR is still in draft.
-    if (ghPr?.draft || !ghPr.body) {
+    if (ghPr?.draft || !ghPr.body || ghPr?.merged_at) {
       return true;
     }
 
