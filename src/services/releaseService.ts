@@ -74,13 +74,11 @@ export default class ReleaseService {
     const changelogCollation: { [changelogHeader: string]: string } = {};
 
     pullRequests.forEach((pullRequest: GHPr) => {
-      const labelName: string | undefined = GHPrHandler.FindLabelByType(pullRequest, LabelCollectionType.AspectCollection)?.name;;
+      const labelName: string | undefined = GHPrHandler.FindLabelByType(pullRequest, LabelCollectionType.AspectCollection)?.name;
 
-      // * Complex 1 Liner that Updates / Creates new Collated Changelog.
-      changelogCollation[labelName ? this.headerGenerator(labelName) : this.OTHERS_HEADER] = changelogCollation[
-        labelName ? this.headerGenerator(labelName) : this.OTHERS_HEADER
-      ]
-        ? `${changelogCollation[this.OTHERS_HEADER]}- ${pullRequest.title} (#${pullRequest.number})\n`
+      const currentHeader: string = labelName ? this.headerGenerator(labelName) : this.OTHERS_HEADER;
+      changelogCollation[currentHeader] = changelogCollation[currentHeader]
+        ? `${changelogCollation[currentHeader]}- ${pullRequest.title} (#${pullRequest.number})\n`
         : `- ${pullRequest.title} (#${pullRequest.number})\n`;
     });
 
