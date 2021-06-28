@@ -55,7 +55,7 @@ export default class BotService {
       return false;
     }
 
-    if (prAction === PRAction.OPENED || prAction === PRAction.READY_FOR_REVIEW || true) {
+    if (prAction === PRAction.OPENED || prAction === PRAction.READY_FOR_REVIEW) {
       prHandlingResults.push(
         await this._prService.handlePRCongratulation(
           pr,
@@ -65,7 +65,7 @@ export default class BotService {
       )
     }
 
-    if (prAction === PRAction.EDITED || prAction === PRAction.READY_FOR_REVIEW) {
+    if (prAction === PRAction.OPENED || prAction === PRAction.EDITED || prAction === PRAction.READY_FOR_REVIEW) {
       prHandlingResults.push(
         await this._prService.validatePRCommitMessageProposal(pr, this._contextService.getPRCommenter(context)),
         await this._prService.assignAspectLabel(
