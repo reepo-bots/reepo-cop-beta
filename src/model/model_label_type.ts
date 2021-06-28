@@ -16,7 +16,8 @@ export enum AspectType {
   Feature = 'Feature',
   Documentation = 'Doc',
   Enhancement = 'Enhancement',
-  Process = 'Process'
+  Process = 'Process',
+  CodeQuality = 'CodeQuality'
 }
 
 export enum PriorityType {

@@ -10,12 +10,12 @@ export default class Label {
   private _aliases: string[];
   private _labelType: LabelType;
 
-  constructor(name: string, desc: string, color: string, substr: string | string[], labelType: LabelType) {
+  constructor(name: string, desc: string, color: string, alias: string | string[], labelType: LabelType) {
     this._name = name;
     this._desc = desc;
     this._color = color;
     this._hash = Label.GenerateHash(name, desc, color);
-    this._aliases = (typeof substr === 'string' || substr instanceof String ? [substr] : substr) as string[];
+    this._aliases = (typeof alias === 'string' || alias instanceof String ? [alias] : alias) as string[];
     this._labelType = labelType;
   }
 

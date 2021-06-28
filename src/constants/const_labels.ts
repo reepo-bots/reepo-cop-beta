@@ -39,6 +39,13 @@ export const LABEL_ARCHIVE: LabelArchive = new LabelArchive([
       '0075CA',
       'doc',
       AspectType.Documentation
+    ),
+    new Label(
+      `📜 ${LabelCollectionType.AspectCollection}.${AspectType.CodeQuality}`,
+      'This issue describes a needed change to coding standards.',
+      '006B75',
+      ['code quality', AspectType.CodeQuality.toLowerCase()],
+      AspectType.CodeQuality
     )
   ]),
   new LabelCollection(LabelCollectionType.PRCollection, [
