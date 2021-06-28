@@ -124,7 +124,6 @@ export default class PRService {
 
     const [_inputStr, extractedIssueNumber, ..._] = extractedIssueArray;
     const linkedIssue: GHIssue | undefined = await issueRetriever(+extractedIssueNumber);
-
     if (!linkedIssue) {
       return '';
     }
@@ -173,20 +172,21 @@ export default class PRService {
         const manualLabelName: string = this.fetchManualAspectLabelName(firstLineOfBody);
 
         // Do not perform a replacement if labels are same
-        if (existingAspectLabel?.name! === manualLabelName) {
+        if (existingAspectLabel?.name === manualLabelName) {
           return true;
         }
 
-        return prLabelReplacer([existingAspectLabel?.name!], manualLabelName ? [manualLabelName] : []);
+        return prLabelReplacer(existingAspectLabel?.name ? [existingAspectLabel?.name!] : [], manualLabelName ? [manualLabelName] : []);
       case 'Linked-Issue':
+        
         const linkedLabelName: string = await this.fetchLinkedAspectLabelName(firstLineOfBody, issueRetriever);
 
         // Do not perform a replacement if labels are same
-        if (existingAspectLabel?.name! === linkedLabelName) {
+        if (existingAspectLabel?.name === linkedLabelName) {
           return true;
         }
 
-        return await prLabelReplacer([existingAspectLabel?.name!], linkedLabelName ? [linkedLabelName] : []);
+        return await prLabelReplacer(existingAspectLabel?.name ? [existingAspectLabel?.name!] : [], linkedLabelName ? [linkedLabelName] : []);
       default:
         return true;
     }
