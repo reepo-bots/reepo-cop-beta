@@ -26,6 +26,8 @@
     <img src="../assets/img/features_auto-issue-labelling.png" width="700px" alt="Auto Issue Labelling"/>
   </p>
 
+  ### Issue Congratulations
+  *reepo-cop* posts congratulatory messages on a user opening opening their 1st and every 25th Issue up to the 100th opened Issue. Refer to PR Congratulation Example below.
 
 ## Pull Requests
 
@@ -50,6 +52,13 @@
     <img src="../assets/img/features_auto-pr-labelling-3.png" width="700px" alt="Auto PR Labelling 3"/>
   </p>
 
+  ### PR Congratulations
+
+  *reepo-cop* posts congratulatory messages on a user opening opening their 1st and every 25th Pull Request up to the 100th opened PR.
+
+  <p align="center">
+    <img src="../assets/img/features_auto-pr-congratulations.png" width="800px" alt="Auto PR Labelling 3"/>
+  </p>
 
 
   ### Automated Commit Message Validation
